@@ -35,11 +35,11 @@ The model is a Seq2Seq decoder with the following general structure:
 
 To introduce the inputs from the rule-based lemmatizer, we added the second encoder and combined the outputs of two encoders before passing them into the decoder. The decoder sctructure is also modified to icorporate new inputs.
 
-![Overall](img/StanfordNLP_Lemmatizer-Overall Modified.jpg)
+![Overall](img/StanfordNLP_Lemmatizer-Overall_Modified.jpg)
 
 #### Decoder
 
-![Decoder](img/StanfordNLP_Lemmatizer-Decoder Modified.jpg)
+![Decoder](img/StanfordNLP_Lemmatizer-Decoder_Modified.jpg)
 
 #### Performance
 
