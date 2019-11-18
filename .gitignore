@@ -1,6 +1,7 @@
 saved_models/
 extern_data/
 data/
+run_lemma.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

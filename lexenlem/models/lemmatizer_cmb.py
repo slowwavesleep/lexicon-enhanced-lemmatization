@@ -98,7 +98,7 @@ def train(args):
     print("[Loading data with batch size {}...]".format(args['batch_size']))
     print("[Loading the outer lemmatizer...]")
     if args['lemmatizer'] is None:
-        raise ValueError('Please, specify the lemmatizer!')
+        lemmatizer = None
     else:
         lemmatizer = importlib.import_module(args['lemmatizer'])
     train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer, evaluation=False)

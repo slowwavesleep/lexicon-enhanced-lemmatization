@@ -88,10 +88,13 @@ class DataLoaderCombined:
         for d in data:
             edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
-            lem = self.lemmatizer.lemmatize(d[0])
-            lem = ''.join([''.join(list(l.replace('|', ''))) for l in lem])
-            lem = list(lem)
-            lem = [constant.SOS] + lem + [constant.EOS]
+            if self.lemmatizer is None:
+                lem = ''
+            else:
+                lem = self.lemmatizer.lemmatize(d[0])
+                lem = ''.join([''.join(list(l.replace('|', ''))) for l in lem])
+                lem = list(lem)
+                lem = [constant.SOS] + lem + [constant.EOS]
             src = [constant.SOS] + src + [constant.EOS]
             pos = [d[1]]
             feats = []
