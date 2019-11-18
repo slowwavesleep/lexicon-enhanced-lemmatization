@@ -17,5 +17,5 @@ test_output_file=${LEMMA_DATA_DIR}/${short}.test.pred.conllu
 test_gold_file=${LEMMA_DATA_DIR}/${short}.test.gold.conllu
 
 echo "Running lemmatizer with $args..."
-python -m stanfordnlp.models.lemmatizer_cmb --data_dir $LEMMA_DATA_DIR --eval_file $test_gold_file \
+python -m lexenlem.models.lemmatizer_cmb --data_dir $LEMMA_DATA_DIR --eval_file $test_gold_file \
         --output_file $test_output_file --gold_file $test_gold_file --lang $short --mode predict $args
