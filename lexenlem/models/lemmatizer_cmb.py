@@ -97,7 +97,7 @@ def train(args):
     # load data
     print("[Loading data with batch size {}...]".format(args['batch_size']))
     print("[Loading the outer lemmatizer...]")
-    if args['lemmatizer'] is None:
+    if args['lemmatizer'] is None or args['lemmatizer'] == 'lexicon':
         lemmatizer = None
     else:
         lemmatizer = importlib.import_module(args['lemmatizer'])
@@ -130,6 +130,11 @@ def train(args):
     dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
+
+    if args['lemmatizer'] == 'lexicon':
+        lemmatizer = trainer.predict_dict
+        train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer, evaluation=False)
+        dev_batch = DataLoaderCombined(args['eval_file'], args['batch_size'], args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True)
 
     if args.get('dict_only', False):
         # save dictionaries
@@ -226,8 +231,10 @@ def evaluate(args):
     print("[Loading the outer lemmatizer...]")
     if loaded_args['lemmatizer'] is None:
         lemmatizer = None
+    elif loaded_args['lemmatizer'] == 'lexicon':
+        lemmatizer = trainer.predict_dict
     else:
-        lemmatizer = importlib.import_module(loaded_args['lemmatizer'])
+        lemmatizer = importlib.import_module(args['lemmatizer'])
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))

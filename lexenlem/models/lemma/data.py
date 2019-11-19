@@ -88,13 +88,6 @@ class DataLoaderCombined:
         for d in data:
             edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
-            if self.lemmatizer is None:
-                lem = ['']
-            else:
-                lem = self.lemmatizer.lemmatize(d[0])
-                lem = ''.join([''.join(list(l.replace('|', ''))) for l in lem])
-                lem = list(lem)
-                lem = [constant.SOS] + lem + [constant.EOS]
             src = [constant.SOS] + src + [constant.EOS]
             pos = [d[1]]
             feats = []
@@ -105,6 +98,16 @@ class DataLoaderCombined:
             inp = src + pos + feats
             inp = combined_vocab.map(inp)
             processed_sent = [inp]
+            if self.lemmatizer is None:
+                lem = ['']
+            else:
+                if self.args['lemmatizer'] == 'lexicon':
+                    lem = self.lemmatizer([(d[0], d[1])], ignore_empty=True)
+                else:
+                    lem = self.lemmatizer.lemmatize(d[0])
+                lem = ''.join([''.join(list(l.replace('|', ''))) for l in lem])
+                lem = list(lem)
+                lem = [constant.SOS] + lem + [constant.EOS]
             lem = combined_vocab.map(lem)
             processed_sent += [lem]
             tgt = list(d[2])

@@ -145,7 +145,7 @@ class Trainer(object):
                 self.word_dict[w] = l
         return
 
-    def predict_dict(self, pairs):
+    def predict_dict(self, pairs, ignore_empty=False):
         """ Predict a list of lemmas using the dict model given (word, pos) pairs. """
         lemmas = []
         for p in pairs:
@@ -155,7 +155,10 @@ class Trainer(object):
             elif w in self.word_dict:
                 lemmas += [self.word_dict[w]]
             else:
-                lemmas += [w]
+                if ignore_empty:
+                    lemmas += ['']
+                else:
+                    lemmas += [w]
         return lemmas
 
     def skip_seq2seq(self, pairs):
