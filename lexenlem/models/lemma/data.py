@@ -89,7 +89,7 @@ class DataLoaderCombined:
             edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
             if self.lemmatizer is None:
-                lem = ''
+                lem = ['']
             else:
                 lem = self.lemmatizer.lemmatize(d[0])
                 lem = ''.join([''.join(list(l.replace('|', ''))) for l in lem])
