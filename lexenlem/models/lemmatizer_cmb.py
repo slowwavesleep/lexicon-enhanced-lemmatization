@@ -227,7 +227,7 @@ def evaluate(args):
     if loaded_args['lemmatizer'] is None:
         lemmatizer = None
     else:
-        lemmatizer = importlib.import_module(args['lemmatizer'])
+        lemmatizer = importlib.import_module(loaded_args['lemmatizer'])
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))

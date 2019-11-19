@@ -209,10 +209,7 @@ class Trainer(object):
         self.word_dict, self.composite_dict = checkpoint['dicts']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         if not self.args['dict_only']:
-            if self.args.get('lemmatizer', False):
-                self.model = Seq2SeqModelCombined(self.args, self.vocab, use_cuda=use_cuda)
-            else:
-                self.model = Seq2SeqModel(self.args, self.vocab, use_cuda=use_cuda)
+            self.model = Seq2SeqModelCombined(self.args, self.vocab, use_cuda=use_cuda)
             self.model.load_state_dict(checkpoint['model'])
         else:
             self.model = None
