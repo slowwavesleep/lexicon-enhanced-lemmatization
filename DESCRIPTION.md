@@ -49,11 +49,13 @@ The modified model gives **97.75 score** on **test set with gold morphology** an
 <a name="results"></a>
 ## Results
 
+### Estonian
+
 All the models are trained with [Estonian UD v2.4 treebank](https://github.com/UniversalDependencies/UD_Estonian-EDT).
 
 All the scores are measured with the [official CoNLL 2018 evaluation script](http://universaldependencies.org/conll18/evaluation.html).
 
-### TurkuNLP
+#### TurkuNLP
 
 [Model repository](https://github.com/jmnybl/universal-lemmatizer/tree/9bc90f81965f2c577e58d0319ba9066641d0e605)
 
@@ -64,7 +66,7 @@ The OPENNMT component in the model was replaced to the newest vestion from [the 
 |Original  |97.30     |96.02     |
 |+vabamorf |97.43     |96.53     |
 
-### StanfordNLP
+#### StanfordNLP
 [Model repository](https://github.com/stanfordnlp/stanfordnlp)
 
 The numbers in the table show the order of the features in the input for encoder. All the models are trained without the edit classifier.
@@ -86,9 +88,44 @@ Tagger dev scores:
 |-----|-----|------|-------|
 |97.18|98.37|95.58 |94.15  |
 
+#### Vabamorf
+
+Vabamorf and lexicon scores on dev set:
+
+|lexicon   |vabamorf |
+|----------|---------|
+|83.77     |86.14    |
+
+If we take all predictions from Vabamorf, they contain the correct lemma in about 87% of cases. 
+
+### Russian
+
+Models for Russian were trained on [UD SynTagRus v2.4](https://github.com/UniversalDependencies/UD_Russian-SynTagRus/tree/master). The corpus was split in two: the first one is original containing over 1m tokens, the second one was reduced to the size of Estonian UD corpus. For each corpus three models were trained: without any additional information, adding lemmas from the lexicon that was built of the training data, adding lemmas from [Pymorphy2](https://github.com/kmike/pymorphy2), a rule-based morphological analyser for Russian and Ukranian. In total, _six_ models were trained.
+
+Scores for the lexicon and Pymorphy2 on the dev set:
+
+|corpus    |lexicon   |pymorphy2|
+|----------|----------|---------|
+|full      |92.28     |89.94    |
+|small     |88.17     |89.55    |
+
+Scores for the lemmatizers on dev and test set:
+
+|model          |dev       |test      |
+|---------------|----------|----------|
+|full           |99.14     |99.07     |
+|full_lexicon   |99.13     |99.11     |
+|full_pymorphy  |99.14     |99.07     |
+|small          |98.51     |97.14     |
+|small_lexicon  |98.63     |97.24     |
+|small_pymorphy |98.51     |97.14     |
+
+The decrease in performace with Pymorphy2 can be caused by the poor performance of the rule-based lemmatizer. Currently, the model gets all the outputs from Pymorphy2, which contain the correct lemma only in about 92% of cases. Another reason may be that Pymorphy generates on average more predictions for each word than Vabamorf.
 
 <a name="errors"></a>
 ## Error analysis
+
+### Estonian 
 
 If we compare the system without double attention and vabamorf input (lemma1) with the system with double attention and vabamorf input (lemma2), we can see improvements.
 
@@ -118,17 +155,16 @@ Kui on tegemist liitmoodustisega, siis:
 - Lõpp on eristatud eelnevast komponendist '+' märgiga; nn. null-lõpp ongi '+0'
 - Sufiks on eristatud eelnevast komponendist '=' märgiga.
 
-
 <a name="todo"></a>
 ## ToDo
 - [ ] Check if the order of inputs has any effect on the performance
 - [ ] Check if replacing rule-based system with the lexicon has any effect on the performance
 - [x] Perform error anaysis
 - [x] Check if the official evaluation script takes into account the underscore in lemmas
-- [ ] Test for other languages
+- [x] Test for other languages
 - [ ] Train the model without disambiguation and guesser
-- [ ] Analyze the performance of Vabamorf
-
+- [x] Analyze the performance of Vabamorf
+- [ ] Check if two inputs are aligned
 
 <a name="references"></a>
 ## References
