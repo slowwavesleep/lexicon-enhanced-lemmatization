@@ -164,7 +164,7 @@ Kui on tegemist liitmoodustisega, siis:
 - [x] Test for other languages
 - [ ] Train the model without disambiguation and guesser
 - [x] Analyze the performance of Vabamorf
-
+- [ ] Check if two inputs are aligned
 
 <a name="references"></a>
 ## References
