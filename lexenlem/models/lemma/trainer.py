@@ -65,14 +65,14 @@ class Trainer(object):
 
     def update(self, batch, eval=False):
         inputs, orig_idx = unpack_batch(batch, self.use_cuda)
-        src, src_mask, tgt_in, tgt_out, pos, feats, vbf, vbf_mask, edits = inputs
+        src, src_mask, tgt_in, tgt_out, pos, feats, lem, lem_mask, edits = inputs
 
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs, edit_logits = self.model(src, src_mask, tgt_in, pos, feats, vbf, vbf_mask)
+        log_probs, edit_logits = self.model(src, src_mask, tgt_in, pos, feats, lem, lem_mask)
         if self.args.get('edit', False):
             assert edit_logits is not None
             loss = self.crit(log_probs.view(-1, self.vocab['char'].size), tgt_out.view(-1), \
@@ -90,11 +90,11 @@ class Trainer(object):
 
     def predict(self, batch, beam_size=1):
         inputs, orig_idx = unpack_batch(batch, self.use_cuda)
-        src, src_mask, tgt_in, tgt_out, pos, feats, vbf, vbf_mask, edits = inputs
+        src, src_mask, tgt_in, tgt_out, pos, feats, lem, lem_mask, edits = inputs
 
         self.model.eval()
         batch_size = src.size(0)
-        preds, edit_logits = self.model.predict(src, src_mask, pos=pos, feats=feats, vbf=vbf, vbf_mask=vbf_mask, beam_size=beam_size)
+        preds, edit_logits = self.model.predict(src, src_mask, pos=pos, feats=feats, lem=lem, lem_mask=lem_mask, beam_size=beam_size)
         pred_seqs = [self.vocab['char'].unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
@@ -248,15 +248,15 @@ class TrainerCombined(Trainer):
             self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx = unpack_batch_combined(batch, self.use_cuda)
-        src, src_mask, vbf, vbf_mask, tgt_in, tgt_out, edits = inputs
+        inputs, _ = unpack_batch_combined(batch, self.use_cuda)
+        src, src_mask, lem, lem_mask, tgt_in, tgt_out, edits = inputs
 
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs, edit_logits = self.model(src, src_mask, tgt_in, vbf, vbf_mask)
+        log_probs, edit_logits = self.model(src, src_mask, tgt_in, lem, lem_mask)
         if self.args.get('edit', False):
             assert edit_logits is not None
             loss = self.crit(log_probs.view(-1, self.vocab['combined'].size), tgt_out.view(-1), \
@@ -274,11 +274,11 @@ class TrainerCombined(Trainer):
 
     def predict(self, batch, beam_size=1):
         inputs, orig_idx = unpack_batch_combined(batch, self.use_cuda)
-        src, src_mask, vbf, vbf_mask, tgt_in, tgt_out, edits = inputs
+        src, src_mask, lem, lem_mask, _, _, edits = inputs
 
         self.model.eval()
         batch_size = src.size(0)
-        preds, edit_logits = self.model.predict(src, src_mask, vbf, vbf_mask, beam_size=beam_size)
+        preds, edit_logits = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size)
         pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens

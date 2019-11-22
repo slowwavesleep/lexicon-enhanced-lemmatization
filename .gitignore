@@ -107,3 +107,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+scripts/test_syntagrus_small.sh
+scripts/test_syntagrus.sh
+lemmas.txt

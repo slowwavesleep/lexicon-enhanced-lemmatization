@@ -234,7 +234,7 @@ def evaluate(args):
     elif loaded_args['lemmatizer'] == 'lexicon':
         lemmatizer = trainer.predict_dict
     else:
-        lemmatizer = importlib.import_module(args['lemmatizer'])
+        lemmatizer = importlib.import_module(loaded_args['lemmatizer'])
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))

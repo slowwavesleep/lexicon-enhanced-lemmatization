@@ -99,13 +99,13 @@ class DataLoaderCombined:
             inp = combined_vocab.map(inp)
             processed_sent = [inp]
             if self.lemmatizer is None:
-                lem = ['']
+                lem = [constant.SOS] + [''] + [constant.EOS]
             else:
                 if self.args['lemmatizer'] == 'lexicon':
                     lem = self.lemmatizer([(d[0], d[1])], ignore_empty=True)
                 else:
                     lem = self.lemmatizer.lemmatize(d[0])
-                lem = ''.join([''.join(list(l.replace('|', ''))) for l in lem])
+                lem = ''.join(lem)
                 lem = list(lem)
                 lem = [constant.SOS] + lem + [constant.EOS]
             lem = combined_vocab.map(lem)
