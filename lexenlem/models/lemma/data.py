@@ -11,6 +11,7 @@ from lexenlem.models.common import conll
 from lexenlem.models.lemma.vocab import Vocab, MultiVocab, FeatureVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
+from lexenlem.models.common.lexicon import Lexicon
 import json
 
 class DataLoaderCombined:
@@ -19,6 +20,7 @@ class DataLoaderCombined:
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
+
         self.lemmatizer = lemmatizer
 
         # check if input source is a file or a Document object
@@ -51,6 +53,11 @@ class DataLoaderCombined:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
             print("Subsample training set with rate {:g}".format(args['sample_train']))
+
+        if lemmatizer == 'lexicon':
+            print("Building the lexicon...")
+            self.lemmatizer = Lexicon()
+            self.lemmatizer.init_lexicon(data)
 
         data = self.preprocess(data, self.vocab['combined'], args)
         # shuffle for training
@@ -99,13 +106,13 @@ class DataLoaderCombined:
             inp = combined_vocab.map(inp)
             processed_sent = [inp]
             if self.lemmatizer is None:
-                lem = [constant.SOS] + [''] + [constant.EOS]
+                lem = [constant.SOS, constant.EOS]
             else:
-                if self.args['lemmatizer'] == 'lexicon':
-                    lem = self.lemmatizer([(d[0], d[1])], ignore_empty=True)
+                if type(self.lemmatizer) is Lexicon:
+                    lem = self.lemmatizer.lemmatize(d[0], d[1])
                 else:
                     lem = self.lemmatizer.lemmatize(d[0])
-                lem = ''.join(lem)
+                    lem = ''.join(lem)
                 lem = list(lem)
                 lem = [constant.SOS] + lem + [constant.EOS]
             lem = combined_vocab.map(lem)

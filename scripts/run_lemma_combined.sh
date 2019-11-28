@@ -20,6 +20,9 @@ test_eval_file=${LEMMA_DATA_DIR}/${short}.test.in.conllu
 test_output_file=${LEMMA_DATA_DIR}/${short}.test.pred.conllu
 test_gold_file=${LEMMA_DATA_DIR}/${short}.test.gold.conllu
 
+echo "Treebank: $treebank"
+echo "Train file: $train_file"
+
 if [ ! -e $train_file ]; then
     bash scripts/prep_lemma_data.sh $treebank
 fi

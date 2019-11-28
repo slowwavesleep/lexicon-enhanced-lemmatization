@@ -110,3 +110,4 @@ venv.bak/
 scripts/test_syntagrus_small.sh
 scripts/test_syntagrus.sh
 lemmas.txt
+run_lemma_big.sh

@@ -232,6 +232,8 @@ class TrainerCombined(Trainer):
             # dict-based components
             self.word_dict = dict()
             self.composite_dict = dict()
+            # lexicon
+            self.lexicon = None
         if not self.args['dict_only']:
             if self.args.get('edit', False):
                 self.crit = loss.MixLoss(self.vocab['combined'].size, self.args['alpha'])
@@ -290,3 +292,33 @@ class TrainerCombined(Trainer):
         else:
             edits = None
         return pred_tokens, edits
+
+    def save(self, filename):
+        params = {
+                'model': self.model.state_dict() if self.model is not None else None,
+                'dicts': (self.word_dict, self.composite_dict),
+                'vocab': self.vocab.state_dict(),
+                'config': self.args,
+                'lexicon': self.lexicon
+                }
+        try:
+            torch.save(params, filename)
+            print("model saved to {}".format(filename))
+        except BaseException:
+            print("[Warning: Saving failed... continuing anyway.]")
+
+    def load(self, filename, use_cuda=False):
+        try:
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
+        except BaseException:
+            print("Cannot load model from {}".format(filename))
+            sys.exit(1)
+        self.args = checkpoint['config']
+        self.word_dict, self.composite_dict = checkpoint['dicts']
+        self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
+        self.lexicon = checkpoint['lexicon']
+        if not self.args['dict_only']:
+            self.model = Seq2SeqModelCombined(self.args, self.vocab, use_cuda=use_cuda)
+            self.model.load_state_dict(checkpoint['model'])
+        else:
+            self.model = None

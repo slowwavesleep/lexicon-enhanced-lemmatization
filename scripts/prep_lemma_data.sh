@@ -20,6 +20,8 @@ else
     src_short=$short
 fi
 
+echo "src_treebank: $src_treebank"
+
 train_conllu=$UDBASE/$src_treebank/${src_short}-ud-train.conllu
 dev_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu # gold dev
 dev_gold_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu

@@ -96,11 +96,14 @@ def main():
 def train(args):
     # load data
     print("[Loading data with batch size {}...]".format(args['batch_size']))
-    print("[Loading the outer lemmatizer...]")
-    if args['lemmatizer'] is None or args['lemmatizer'] == 'lexicon':
+    if args['lemmatizer'] is None:
         lemmatizer = None
+    elif args['lemmatizer'] == 'lexicon':
+        print("[Using the lexicon...]")
+        lemmatizer = 'lexicon'
     else:
-        lemmatizer = importlib.import_module(args['lemmatizer'])
+        print(f"[Loading the {args['lemmatizer']} lemmatizer...]")
+        lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer'])
     train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab['combined'].size
@@ -123,6 +126,8 @@ def train(args):
     # start training
     # train a dictionary-based lemmatizer
     trainer = TrainerCombined(args=args, vocab=vocab, use_cuda=args['cuda'])
+    if args['lemmatizer'] == 'lexicon':
+        trainer.lexicon = train_batch.lemmatizer
     print("[Training dictionary-based lemmatizer...]")
     trainer.train_dict(train_batch.conll.get(['word', 'upos', 'lemma']))
     print("Evaluating on dev set...")
@@ -130,11 +135,6 @@ def train(args):
     dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
-
-    if args['lemmatizer'] == 'lexicon':
-        lemmatizer = trainer.predict_dict
-        train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer, evaluation=False)
-        dev_batch = DataLoaderCombined(args['eval_file'], args['batch_size'], args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True)
 
     if args.get('dict_only', False):
         # save dictionaries
@@ -232,9 +232,11 @@ def evaluate(args):
     if loaded_args['lemmatizer'] is None:
         lemmatizer = None
     elif loaded_args['lemmatizer'] == 'lexicon':
-        lemmatizer = trainer.predict_dict
+        print("[Using the lexicon...]")
+        lemmatizer = trainer.lexicon
     else:
-        lemmatizer = importlib.import_module(loaded_args['lemmatizer'])
+        print(f"[Loading the {args['lemmatizer']} lemmatizer...]")
+        lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer'])
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
