@@ -127,7 +127,7 @@ Scores for the lemmatizers on dev and test set:
 |full_pymorphy  |99.43     |97.15     |
 |small          |-         |-         |
 |\*small_lexicon|\*99.82   |\*85.12   |
-|small_pymorphy |-         |-         |
+|small_pymorphy |99.20     |97.55     |
 
 The decrease in performace with Pymorphy2 can be caused by the poor performance of the rule-based lemmatizer. Currently, the model gets all the outputs from Pymorphy2, which contain the correct lemma only in about 92% of cases. Another reason may be that Pymorphy generates on average more predictions for each word than Vabamorf.
 
