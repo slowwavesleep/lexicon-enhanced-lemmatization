@@ -4,7 +4,7 @@ import lexenlem.models.common.seq2seq_constant as constant
 
 
 class Lexicon:
-    def __init__(self, dropout):
+    def __init__(self, dropout=0.1):
         self.pos_lexicon = defaultdict(str)
         self.word_lexicon = defaultdict(str)
         self.dropout = dropout
