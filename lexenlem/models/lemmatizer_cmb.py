@@ -50,6 +50,7 @@ def parse_args():
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
     parser.add_argument('--no_edit', dest='edit', action='store_false', help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
     parser.add_argument('--lemmatizer', type=str, default=None, help='Name of the outer lemmatizer function')
+    parser.add_argument('--lexicon_dropout', type=float, default=0.1, help='Probability to drop the word from the lexicon')
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
     parser.add_argument('--alpha', type=float, default=1.0)
 
