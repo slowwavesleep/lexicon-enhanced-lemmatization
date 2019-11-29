@@ -23,4 +23,4 @@ class Lexicon:
         if word in self.word_lexicon:
             return self.word_lexicon[word]
         else:
-            return constant.PAD
+            return constant.UNK

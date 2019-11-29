@@ -106,6 +106,8 @@ def train(args):
         lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer'])
     train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer, evaluation=False)
     vocab = train_batch.vocab
+    if args['lemmatizer'] == 'lexicon':
+        lemmatizer = train_batch.lemmatizer
     args['vocab_size'] = vocab['combined'].size
     dev_batch = DataLoaderCombined(args['eval_file'], args['batch_size'], args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True)
 
