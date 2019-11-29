@@ -80,13 +80,22 @@ The numbers in the table show the order of the features in the input for encoder
 | 2 | 1 |  3  |    -   |  96.71   |  96.19   |
 | 4 | 3 |  2  |    1   |  96.32   |  96.04   |
 
-The model currently constructs the embeddings and vocabularies for input, pos and feats separately and later concatenates them together for input. If we concatenate the raw input and build one dictionary and embedding for it, the **gold morph test score** of the model rises up to **97.50**, however, the **predicted morh test score** is **96.17**.  
+The model currently constructs the embeddings and vocabularies for input, pos and feats separately and later concatenates them together for input. If we concatenate the raw input and build one dictionary and embedding for it, the **gold morph test score** of the model rises up to **97.50**, however, the **predicted morph test score** is **96.17**.  
 
 Tagger dev scores:
 
 |UPOS |XPOS |UFeats|AllTags|
 |-----|-----|------|-------|
 |97.18|98.37|95.58 |94.15  |
+
+Scores for the lemmatizers on dev and test set:
+
+|model                  |dev       |test      |
+|-----------------------|----------|----------|
+|default                |96.91     |96.17     |
+|\*lexicon              |\*99.74   |\*81.47   |
+|vabamorf (default)     |97.37     |96.64     |
+|vabamorf (no guesser)  |97.43     |96.78     |
 
 #### Vabamorf
 
@@ -113,12 +122,12 @@ Scores for the lemmatizers on dev and test set:
 
 |model          |dev       |test      |
 |---------------|----------|----------|
-|full           |99.14     |99.07     |
-|full_lexicon   |99.13     |99.11     |
-|full_pymorphy  |99.14     |99.07     |
-|small          |98.51     |97.14     |
-|small_lexicon  |98.63     |97.24     |
-|small_pymorphy |98.51     |97.14     |
+|full           |99.10     |97.60     |
+|\*full_lexicon |\*99.85   |\*89.48   |
+|full_pymorphy  |99.43     |97.15     |
+|small          |-         |-         |
+|\*small_lexicon|\*99.82   |\*85.12   |
+|small_pymorphy |99.20     |97.55     |
 
 The decrease in performace with Pymorphy2 can be caused by the poor performance of the rule-based lemmatizer. Currently, the model gets all the outputs from Pymorphy2, which contain the correct lemma only in about 92% of cases. Another reason may be that Pymorphy generates on average more predictions for each word than Vabamorf.
 
@@ -162,7 +171,7 @@ Kui on tegemist liitmoodustisega, siis:
 - [x] Perform error anaysis
 - [x] Check if the official evaluation script takes into account the underscore in lemmas
 - [x] Test for other languages
-- [ ] Train the model without disambiguation and guesser
+- [x] Train the model without disambiguation and guesser
 - [x] Analyze the performance of Vabamorf
 - [ ] Check if two inputs are aligned
 
