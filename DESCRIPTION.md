@@ -93,7 +93,8 @@ Scores for the lemmatizers on dev and test set:
 |model                  |dev       |test      |
 |-----------------------|----------|----------|
 |default                |96.91     |96.17     |
-|\*lexicon              |\*99.74   |\*81.47   |
+|lexicon                |79.89     |81.81     |
+|lexicon (dropout 0.1)  |93.67     |93.53     |
 |vabamorf (default)     |97.37     |96.64     |
 |vabamorf (no guesser)  |97.43     |96.78     |
 
@@ -120,14 +121,16 @@ Scores for the lexicon and Pymorphy2 on the dev set:
 
 Scores for the lemmatizers on dev and test set:
 
-|model          |dev       |test      |
-|---------------|----------|----------|
-|full           |99.10     |97.60     |
-|\*full_lexicon |\*99.85   |\*89.48   |
-|full_pymorphy  |99.43     |97.15     |
-|small          |-         |-         |
-|\*small_lexicon|\*99.82   |\*85.12   |
-|small_pymorphy |99.20     |97.55     |
+|model                        |dev       |test      |
+|-----------------------------|----------|----------|
+|full                         |99.10     |97.60     |
+|full_lexicon                 |90.94     |90.12     |
+|full_lexicon (dropout 0.1)   |98.14     |97.03     |
+|full_pymorphy                |99.43     |97.15     |
+|small                        |97.81     |96.63     |
+|small_lexicon                |86.39     |85.98     |
+|small_lexicon (dropout 0.1)  |97.10     |96.12     |
+|small_pymorphy               |99.20     |97.55     |
 
 The decrease in performace with Pymorphy2 can be caused by the poor performance of the rule-based lemmatizer. Currently, the model gets all the outputs from Pymorphy2, which contain the correct lemma only in about 92% of cases. Another reason may be that Pymorphy generates on average more predictions for each word than Vabamorf.
 
@@ -164,16 +167,22 @@ Kui on tegemist liitmoodustisega, siis:
 - Lõpp on eristatud eelnevast komponendist '+' märgiga; nn. null-lõpp ongi '+0'
 - Sufiks on eristatud eelnevast komponendist '=' märgiga.
 
+### Lexicon
+
+The issue with the default lexicon is that it contains all the words from the training set, since it was constructed from the training set. Thus, the model doesn't know how to perform when the lemma is not found in the lexicon. We tried to tackle this problem with discarding each word from the lexicon with the probability of 0.1, so that the model trains with unknowns as well. This help the issue, but the model with the lexicon still the model with the outer lemmatizers as well as the default models. Probably, more experiments needed with different word dropout rates.
+
 <a name="todo"></a>
 ## ToDo
-- [ ] Check if the order of inputs has any effect on the performance
-- [ ] Check if replacing rule-based system with the lexicon has any effect on the performance
+- [x] Check if the order of inputs has any effect on the performance
+- [x] Check if replacing rule-based system with the lexicon has any effect on the performance
 - [x] Perform error anaysis
 - [x] Check if the official evaluation script takes into account the underscore in lemmas
 - [x] Test for other languages
 - [x] Train the model without disambiguation and guesser
 - [x] Analyze the performance of Vabamorf
 - [ ] Check if two inputs are aligned
+- [x] Introduce dropout to the lexicon
+- [ ] Test if results of the default vabamorf and vabamorf without guesser are significantly different
 
 <a name="references"></a>
 ## References
