@@ -84,7 +84,7 @@ class DataLoaderCombined:
     def init_vocab(self, data):
         assert self.eval is False, "Vocab file must exist for evaluation"
         char_data = list("".join(d[0] + d[2] for d in data))
-        pos_data = [d[1] for d in data]
+        pos_data = ['POS=' + d[1] for d in data]
         feats_data = self.make_feats_data(data)
         combined_data = char_data + pos_data + feats_data
         combined_vocab = Vocab(combined_data, self.args['lang'])
