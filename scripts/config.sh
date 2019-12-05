@@ -13,3 +13,6 @@ export POS_DATA_DIR=$DATA_ROOT/pos
 
 # Set directories to store external word vector data
 export WORDVEC_DIR=./extern_data/word2vec
+
+# Set a directory for the results
+export RESULTS_DIR=./results
