@@ -239,7 +239,7 @@ def evaluate(args):
         lemmatizer = trainer.lexicon
     else:
         print(f"[Loading the {args['lemmatizer']} lemmatizer...]")
-        lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer'])
+        lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + loaded_args['lemmatizer'])
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
