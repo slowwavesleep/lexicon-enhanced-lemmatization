@@ -98,6 +98,26 @@ Scores for the lemmatizers on dev and test set:
 |vabamorf (default)     |97.37     |96.64     |
 |vabamorf (no guesser)  |97.43     |96.78     |
 
+To test if the difference between the `vabamorf (default)` and `vabamorf (no guesser)` models are significant, several tests were conducted. First, we tried to check if there is a statistically significant differents between the means of the scores using the paired Wilcoxon test. Ten additional models were trained with different seeds and the p-value was 0.063 that means that the difference between the scores is not statistically significant. However, in order for the Wilcoxon test to be credible, we need at least 20 pairs of samples. This is very computationally expensive and not reasonable to do every time to perform the analysis. Paired Student's t-test cannot be performed neither, since the independence requirement is not met.
+
+To solve this problem, the paired bootstrap resampling test was used. This test was used in the official [CoNLL-2018 shared task](https://universaldependencies.org/conll18/proceedings/pdf/K18-2001.pdf) to rank the systems. Also, another papers, for example [(Philipp Koehn, 2004)](https://www.aclweb.org/anthology/W04-3250.pdf) use this method to compare machine translation systems. There exists an official evaluation script in the [UDAPI](https://github.com/udapi/udapi-python/blob/master/udapi/block/eval/conll18.py) library, however, it has some problems with launching and the documentation is not clear enough. Thus, we implemented our own evaluation script following the methodology of the paired bootstrap resampling test.
+
+In short, the sentenced for each system gold and predicted are resampled with replacement 1000 times, and the score of each resample is taken. Then, it is counted how many times one system perfomed better or worse than another. Later, the scores for each system are sorted by the middle score. Finally, the p-value is calculated as `number of wins / number of resamples` and 95% confidence interval is taken to calculate the score deviation from the average. 
+
+Results are the following:
+
+```
+ 1.      Vabamorf no Disambiguator 96.85 ± 0.17 (96.68 .. 97.02) p=0.027
+------------------------------------------------------------------------
+ 2.               Vabamorf Default 96.59 ± 0.19 (96.41 .. 96.78) p=0.001
+------------------------------------------------------------------------
+ 3.                        Default 95.99 ± 0.20 (95.78 .. 96.18) p=0.001
+------------------------------------------------------------------------
+ 4.                    Lexicon 010 94.66 ± 0.23 (94.43 .. 94.89)
+```
+
+The line between the systems shows that there is a statistically significant difference between the two systems. We can also see that the `vabamorf (default)` and `vabamorf (no guesser)` models perform significantly different. 
+
 #### Vabamorf
 
 Vabamorf and lexicon scores on dev set:
