@@ -15,10 +15,8 @@ class Lexicon:
         for entry, _ in ctr.most_common():
             if random.random() > self.dropout:
                 word, pos, lemma = entry
-                if (word, pos) not in self.pos_lexicon:
-                    self.pos_lexicon[(word, pos)] += lemma
-                if word not in self.word_lexicon:
-                    self.word_lexicon[word] += lemma
+                self.pos_lexicon[(word, pos)] += lemma
+                self.word_lexicon[word] += lemma
 
     def lemmatize(self, word, pos):
         if (word, pos) in self.pos_lexicon:
