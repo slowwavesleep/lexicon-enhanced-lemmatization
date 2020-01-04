@@ -302,6 +302,8 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         self.nlayers = args['num_layers'] # encoder layers, decoder layers = 1
         self.emb_dropout = args.get('emb_dropout', 0.0)
         self.dropout = args['dropout']
+        self.is_lexicon = True if args.get('lemmatizer', False) == 'lexicon' else False
+        self.lexicon_dropout = args['lexicon_dropout']
         self.pad_token = constant.PAD_ID
         self.max_dec_len = args['max_dec_len']
         self.use_cuda = use_cuda
@@ -394,7 +396,15 @@ class Seq2SeqModelCombined(Seq2SeqModel):
 
         h_in, (hn, cn) = self.encode(self.encoder, enc_inputs, src_lens)
 
+        # Replace the word from the lexicon with UNK with the probability of lexicon_dropout
+        if self.is_lexicon and self.lexicon_dropout > 0:
+            lem_hide = torch.FloatTensor(lem.size()).uniform_() < self.lexicon_dropout
+            lem_hide = lem_hide.cuda() if self.use_cuda else lem_hide
+            lem_hide = lem_hide * (lem > 0)
+            lem = lem.masked_fill_(lem_hide, constant.UNK_ID)
+
         lem_inputs = self.emb_drop(self.embedding(lem))
+
         lem_lens = list(lem_mask.data.eq(constant.PAD_ID).long().sum(1))
         h_in1, (hn1, cn1) = self.encode(self.lexicon_encoder, lem_inputs, lem_lens)
 
