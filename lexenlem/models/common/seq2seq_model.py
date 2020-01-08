@@ -398,10 +398,14 @@ class Seq2SeqModelCombined(Seq2SeqModel):
 
         # Replace the word from the lexicon with UNK with the probability of lexicon_dropout
         if self.is_lexicon and self.lexicon_dropout > 0:
-            lem_hide = torch.FloatTensor(lem.size()).uniform_() < self.lexicon_dropout
+            lem_stump = torch.tensor(
+                [constant.SOS_ID, constant.UNK_ID, constant.EOS_ID] + 
+                [constant.PAD_ID] * (lem.size()[1] - 3)
+            )
+            lem_hide = torch.FloatTensor(lem.size()[0]).uniform_() < self.lexicon_dropout
             lem_hide = lem_hide.cuda() if self.use_cuda else lem_hide
-            lem_hide = lem_hide * (lem > 0)
-            lem = lem.masked_fill_(lem_hide, constant.UNK_ID)
+            lem_stump = lem_stump.cuda() if self.use_cuda else lem_stump
+            lem[lem_hide] = lem_stump.repeat(lem[lem_hide].size()[0], 1)
 
         lem_inputs = self.emb_drop(self.embedding(lem))
 
