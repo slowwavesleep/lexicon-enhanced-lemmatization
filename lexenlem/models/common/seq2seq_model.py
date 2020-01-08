@@ -405,7 +405,8 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             lem_hide = torch.FloatTensor(lem.size()[0]).uniform_() < self.lexicon_dropout
             lem_hide = lem_hide.cuda() if self.use_cuda else lem_hide
             lem_stump = lem_stump.cuda() if self.use_cuda else lem_stump
-            lem[lem_hide] = lem_stump.repeat(lem[lem_hide].size()[0], 1)
+            if lem_hide.any():
+                lem[lem_hide] = lem_stump.repeat(lem[lem_hide].size()[0], 1)
 
         lem_inputs = self.emb_drop(self.embedding(lem))
 
