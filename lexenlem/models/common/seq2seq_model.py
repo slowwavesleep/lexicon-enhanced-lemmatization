@@ -400,13 +400,17 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         if self.is_lexicon and self.lexicon_dropout > 0:
             lem_stump = torch.tensor(
                 [constant.SOS_ID, constant.UNK_ID, constant.EOS_ID] + 
-                [constant.PAD_ID] * (lem.size()[1] - 3)
+                [constant.PAD_ID] * (lem.size(1) - 3)
             )
-            lem_hide = torch.FloatTensor(lem.size()[0]).uniform_() < self.lexicon_dropout
-            lem_hide = lem_hide.cuda() if self.use_cuda else lem_hide
-            lem_stump = lem_stump.cuda() if self.use_cuda else lem_stump
+            lem_mask_stump = torch.tensor([0]*3 + [1]*(lem.size(1) - 3))
+            lem_hide = torch.FloatTensor(lem.size(0)).uniform_() < self.lexicon_dropout
+            if self.use_cuda:
+                lem_hide = lem_hide.cuda()
+                lem_stump = lem_stump.cuda()
+                lem_mask_stump = lem_mask_stump.cuda()
             if lem_hide.any():
-                lem[lem_hide] = lem_stump.repeat(lem[lem_hide].size()[0], 1)
+                lem[lem_hide] = lem_stump.repeat(lem[lem_hide].size(0), 1)
+                lem_mask[lem_hide] = lem_mask_stump.repeat(lem_mask[lem_hide].size(0), 1)
 
         lem_inputs = self.emb_drop(self.embedding(lem))
 
