@@ -415,6 +415,11 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         lem_inputs = self.emb_drop(self.embedding(lem))
 
         lem_lens = list(lem_mask.data.eq(constant.PAD_ID).long().sum(1))
+
+        # Make the mask elements have the same size as encoder outputs
+        if lem_mask.size() != max(lem_lens):
+            lem_mask = lem_mask.narrow(1, 0, max(lem_lens))
+
         h_in1, (hn1, cn1) = self.encode(self.lexicon_encoder, lem_inputs, lem_lens)
 
         hn = torch.cat((hn, hn1), 1)
