@@ -402,7 +402,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
                 [constant.SOS_ID, constant.UNK_ID, constant.EOS_ID] + 
                 [constant.PAD_ID] * (lem.size(1) - 3)
             )
-            lem_mask_stump = torch.tensor([0]*3 + [1]*(lem.size(1) - 3))
+            lem_mask_stump = torch.BoolTensor([0]*3 + [1]*(lem.size(1) - 3))
             lem_hide = torch.FloatTensor(lem.size(0)).uniform_() < self.lexicon_dropout
             if self.use_cuda:
                 lem_hide = lem_hide.cuda()
@@ -417,8 +417,8 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         lem_lens = list(lem_mask.data.eq(constant.PAD_ID).long().sum(1))
 
         # Make the mask elements have the same size as encoder outputs
-        if lem_mask.size() != max(lem_lens):
-            lem_mask = lem_mask.narrow(1, 0, max(lem_lens))
+        if lem_mask.size(1) != max(lem_lens).item():
+            lem_mask = lem_mask.narrow(1, 0, max(lem_lens).item())
 
         h_in1, (hn1, cn1) = self.encode(self.lexicon_encoder, lem_inputs, lem_lens)
 
