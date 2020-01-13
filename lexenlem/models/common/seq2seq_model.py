@@ -402,7 +402,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
                 [constant.SOS_ID, constant.UNK_ID, constant.EOS_ID] + 
                 [constant.PAD_ID] * (lem.size(1) - 3)
             )
-            lem_mask_stump = torch.BoolTensor([0]*3 + [1]*(lem.size(1) - 3))
+            lem_mask_stump = torch.tensor([0]*3 + [1]*(lem.size(1) - 3), dtype=lem_mask.dtype)
             lem_hide = torch.FloatTensor(lem.size(0)).uniform_() < self.lexicon_dropout
             if self.use_cuda:
                 lem_hide = lem_hide.cuda()
