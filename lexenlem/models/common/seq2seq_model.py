@@ -12,6 +12,8 @@ from lexenlem.models.common import utils
 from lexenlem.models.common.seq2seq_modules import LSTMAttention, LSTMDoubleAttention
 from lexenlem.models.common.beam import Beam
 
+import json
+
 class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.
@@ -311,6 +313,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         self.args = args
         self.emb_matrix = emb_matrix
         self.vocab = vocab
+        self.log_attn = args['log_attn']
 
         print("Building an attentional Seq2Seq model...")
         print("Using a Bi-LSTM encoder")
@@ -380,13 +383,13 @@ class Seq2SeqModelCombined(Seq2SeqModel):
     def decode(self, dec_inputs, hn, cn, src_ctx, lex_ctx=None, ctx_mask=None, lex_mask=None):
         """ Decode a step, based on context encoding and source context states."""
         dec_hidden = (hn, cn)
-        h_out, dec_hidden = self.decoder(dec_inputs, dec_hidden, src_ctx, lex_ctx, ctx_mask, lex_mask)
+        h_out, dec_hidden, attn = self.decoder(dec_inputs, dec_hidden, src_ctx, lex_ctx, ctx_mask, lex_mask)
 
         h_out_reshape = h_out.contiguous().view(h_out.size(0) * h_out.size(1), -1)
         decoder_logits = self.dec2vocab(h_out_reshape)
         decoder_logits = decoder_logits.view(h_out.size(0), h_out.size(1), -1)
         log_probs = self.get_log_prob(decoder_logits)
-        return log_probs, dec_hidden
+        return log_probs, dec_hidden, attn
 
     def forward(self, src, src_mask, tgt_in, lem=None, lem_mask=None):
         # prepare for encoder/decoder
@@ -433,7 +436,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         else:
             edit_logits = None
         
-        log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
+        log_probs, _, attn = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
 
         return log_probs, edit_logits
 
@@ -480,14 +483,16 @@ class Seq2SeqModelCombined(Seq2SeqModel):
                 s = e.contiguous().view(beam_size, br // beam_size, d)[:,idx]
                 s.data.copy_(s.data.index_select(0, positions))
 
+        attns = []
         # (3) main loop
         for i in range(self.max_dec_len):
             dec_inputs = torch.stack([b.get_current_state() for b in beam]).t().contiguous().view(-1, 1)
             dec_inputs = self.embedding(dec_inputs)
-            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
+            log_probs, (hn, cn), attn = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
             log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1)\
                     .contiguous() # [batch, beam, V]
 
+            attns.append([x.tolist() for x in attn])
             # advance each beam
             done = []
             for b in range(batch_size):
@@ -499,6 +504,14 @@ class Seq2SeqModelCombined(Seq2SeqModel):
 
             if len(done) == batch_size:
                 break
+        
+        if self.log_attn:
+            log_attn = {
+                'src': src.tolist(),
+                'lem': lem.tolist(),
+                'attns': attns
+                }
+            json.dump(log_attn, open('log_attn.json', 'w', encoding='utf-8'))
 
         # back trace and find hypothesis
         all_hyp, all_scores = [], []

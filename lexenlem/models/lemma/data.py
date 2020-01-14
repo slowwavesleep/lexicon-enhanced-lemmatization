@@ -113,7 +113,6 @@ class DataLoaderCombined:
                 else:
                     lem = self.lemmatizer.lemmatize(d[0])
                     lem = ''.join(lem)
-                lem = list(lem)
                 lem = [constant.SOS] + lem + [constant.EOS]
             lem = combined_vocab.map(lem)
             processed_sent += [lem]

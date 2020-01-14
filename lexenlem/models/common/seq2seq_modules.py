@@ -275,8 +275,8 @@ class LSTMDoubleAttention(LSTMAttention):
         for i in steps:
             hidden = self.lstm_cell(input[i], hidden)
             hy, _ = hidden
-            h_tilde0, _ = self.attention_layer(hy, src_ctx, mask=ctx_mask)
-            h_tilde1, _ = self.attention_layer(hy, lex_ctx, mask=lex_mask)
+            h_tilde0, attn0 = self.attention_layer(hy, src_ctx, mask=ctx_mask)
+            h_tilde1, attn1 = self.attention_layer(hy, lex_ctx, mask=lex_mask)
             h_tilde = torch.cat((h_tilde0, h_tilde1), 1)
             h_tilde = self.linear(h_tilde)
             output.append(h_tilde)
@@ -285,5 +285,7 @@ class LSTMDoubleAttention(LSTMAttention):
         if self.batch_first:
             output = output.transpose(0,1)
 
-        return output, hidden
+        attn = (attn0, attn1)
+
+        return output, hidden, attn
 

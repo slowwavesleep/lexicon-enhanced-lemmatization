@@ -18,7 +18,7 @@ class Lexicon:
 
     def lemmatize(self, word, pos):
         if (word, pos) in self.pos_lexicon:
-            return self.pos_lexicon[(word, pos)]
+            return list(self.pos_lexicon[(word, pos)])
         if word in self.word_lexicon:
-            return self.word_lexicon[word]
-        return constant.UNK
+            return list(self.word_lexicon[word])
+        return [constant.UNK]

@@ -64,6 +64,7 @@ def parse_args():
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--model_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
+    parser.add_argument('--log_attn', action='store_true', help='Log attention output.')
 
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -238,7 +239,7 @@ def evaluate(args):
         print("[Using the lexicon...]")
         lemmatizer = trainer.lexicon
     else:
-        print(f"[Loading the {args['lemmatizer']} lemmatizer...]")
+        print(f"[Loading the {loaded_args['lemmatizer']} lemmatizer...]")
         lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + loaded_args['lemmatizer'])
 
     # laod data
