@@ -21,4 +21,4 @@ class Lexicon:
             return list(self.pos_lexicon[(word, pos)])
         if word in self.word_lexicon:
             return list(self.word_lexicon[word])
-        return [constant.UNK]
+        return []
