@@ -402,8 +402,8 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         # Replace the word from the lexicon with UNK with the probability of lexicon_dropout
         if self.is_lexicon and self.lexicon_dropout > 0:
             lem_stump = torch.tensor(
-                [constant.SOS_ID, constant.UNK_ID, constant.EOS_ID] + 
-                [constant.PAD_ID] * (lem.size(1) - 3)
+                [constant.SOS_ID, constant.EOS_ID] + 
+                [constant.PAD_ID] * (lem.size(1) - 2)
             )
             lem_mask_stump = torch.tensor([0]*3 + [1]*(lem.size(1) - 3), dtype=lem_mask.dtype)
             lem_hide = torch.FloatTensor(lem.size(0)).uniform_() < self.lexicon_dropout
