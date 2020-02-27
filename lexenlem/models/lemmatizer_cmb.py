@@ -28,6 +28,7 @@ import lexenlem.models.common.seq2seq_constant as constant
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/lemma', help='Directory for all lemma data.')
+    parser.add_argument('--unimorph_dir', type=str, default='', help='Directory of unimorph file')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')

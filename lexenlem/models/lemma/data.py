@@ -56,7 +56,7 @@ class DataLoaderCombined:
 
         if lemmatizer == 'lexicon':
             print("Building the lexicon...")
-            self.lemmatizer = Lexicon()
+            self.lemmatizer = Lexicon(unimorph=args['unimorph_dir'])
             self.lemmatizer.init_lexicon(data)
 
         data = self.preprocess(data, self.vocab['combined'], args)
