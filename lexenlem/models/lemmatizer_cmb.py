@@ -28,6 +28,7 @@ import lexenlem.models.common.seq2seq_constant as constant
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/lemma', help='Directory for all lemma data.')
+    parser.add_argument('--unimorph_dir', type=str, default='', help='Directory of unimorph file')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
@@ -50,6 +51,8 @@ def parse_args():
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
     parser.add_argument('--no_edit', dest='edit', action='store_false', help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
     parser.add_argument('--lemmatizer', type=str, default=None, help='Name of the outer lemmatizer function')
+    parser.add_argument('--no_pos_lexicon', dest='use_pos', action='store_false', help='Do not use word-pos dictionary in the lexicon')
+    parser.add_argument('--no_word_lexicon', dest='use_word', action='store_false', help='Do not use word dictionary in the lexicon')
     parser.add_argument('--lexicon_dropout', type=float, default=0.1, help='Probability to drop the word from the lexicon')
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
     parser.add_argument('--alpha', type=float, default=1.0)
@@ -58,8 +61,10 @@ def parse_args():
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=0.9)
-    parser.add_argument('--decay_epoch', type=int, default=10, help="Decay the lr starting from this epoch.")
-    parser.add_argument('--num_epoch', type=int, default=20)
+    parser.add_argument('--decay_epoch', type=int, default=30, help="Decay the lr starting from this epoch.")
+    parser.add_argument('--num_epoch', type=int, default=60)
+    parser.add_argument('--early_stop', type=int, default=10, help="Stop training if dev score doesn't improve after the specified number of epochs.")
+    parser.add_argument('--min_epochs', type=int, default=10, help="Minimum number of epochs to train before early stopping gets applied.")
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
@@ -88,7 +93,7 @@ def main():
 
     # manually correct for training epochs
     if args['lang'] in ['cs_pdt', 'ru_syntagrus']:
-        args['num_epoch'] = 10
+        args['num_epoch'] = 30
 
     if args['mode'] == 'train':
         train(args)
@@ -150,6 +155,7 @@ def train(args):
         max_steps = len(train_batch) * args['num_epoch']
         max_dev_steps = len(dev_batch)
         dev_score_history = []
+        devs_without_improvements = 0
         best_dev_preds = []
         current_lr = args['lr']
         global_start_time = time.time()
@@ -202,6 +208,17 @@ def train(args):
                 trainer.save(model_file)
                 print("new best model saved.")
                 best_dev_preds = dev_preds
+
+            # early stopping
+            if epoch > args['min_epochs']:
+                if dev_score < max(dev_score_history):
+                    devs_without_improvements += 1
+                    print("{} epochs since last dev score improvement.".format(devs_without_improvements))
+                else:
+                    devs_without_improvements = 0
+            if devs_without_improvements > args['early_stop']:
+                print("No dev score improvements for {} epocs. Stopping training...".format(args['early_stop']))
+                break
 
             # lr schedule
             if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1] and \

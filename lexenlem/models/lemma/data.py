@@ -56,7 +56,11 @@ class DataLoaderCombined:
 
         if lemmatizer == 'lexicon':
             print("Building the lexicon...")
-            self.lemmatizer = Lexicon()
+            self.lemmatizer = Lexicon(
+                unimorph=args['unimorph_dir'], 
+                use_pos=args.get('use_pos', False), 
+                use_word=args.get('use_word', False)
+            )
             self.lemmatizer.init_lexicon(data)
 
         data = self.preprocess(data, self.vocab['combined'], args)
@@ -112,7 +116,6 @@ class DataLoaderCombined:
                     lem = self.lemmatizer.lemmatize(d[0], d[1])
                 else:
                     lem = self.lemmatizer.lemmatize(d[0])
-                    lem = ''.join(lem)
                 lem = [constant.SOS] + lem + [constant.EOS]
             lem = combined_vocab.map(lem)
             processed_sent += [lem]
