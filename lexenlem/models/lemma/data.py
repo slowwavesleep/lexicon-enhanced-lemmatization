@@ -114,6 +114,8 @@ class DataLoaderCombined:
             else:
                 if type(self.lemmatizer) is Lexicon:
                     lem = self.lemmatizer.lemmatize(d[0], d[1])
+                elif args['lemmatizer'] == 'apertium':
+                    lem = self.lemmatizer.lemmatize(d[0], args['lang'].split('_')[0])
                 else:
                     lem = self.lemmatizer.lemmatize(d[0])
                 lem = [constant.SOS] + lem + [constant.EOS]
