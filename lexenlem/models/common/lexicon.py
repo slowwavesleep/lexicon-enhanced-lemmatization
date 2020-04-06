@@ -24,8 +24,9 @@ class Lexicon:
                 line = line.strip()
                 if line:
                     line = line.split('\t')
-                    lemma, word = line[0], line[1].split()[-1]
-                    ctr[(lemma, word)] += 1
+                    if len(line[1].split()) == 1:
+                        lemma, word = line[0], line[1]
+                        ctr[(lemma, word)] += 1
         for entry, _ in ctr.most_common():
             lemma, word = entry
             self.unimorph_lexicon[word] += lemma
