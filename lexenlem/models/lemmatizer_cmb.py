@@ -211,7 +211,7 @@ def train(args):
 
             # early stopping
             if epoch > args['min_epochs']:
-                if dev_score < max(dev_score_history):
+                if dev_score <= max(dev_score_history):
                     devs_without_improvements += 1
                     print("{} epochs since last dev score improvement.".format(devs_without_improvements))
                 else:
