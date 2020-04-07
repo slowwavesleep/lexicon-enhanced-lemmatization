@@ -1,8 +1,3 @@
-saved_models/
-extern_data/
-data/
-run_lemma.sh
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -107,7 +102,20 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Repository specific ignores
 scripts/test_syntagrus_small.sh
 scripts/test_syntagrus.sh
 lemmas.txt
 rocket_scripts/
+lexenlem/lemmatizers/apertium_*.json
+lexenlem/lemmatizers/apertium_*.py
+lexenlem/lemmatizers/vabamorf_*.json
+lexenlem/lemmatizers/vabamorf_*.py
+lexenlem/utils/paired_bootstrap_2.py
+results/
+/*.sh
+saved_models/
+extern_data/
+data/
+run_lemma.sh
