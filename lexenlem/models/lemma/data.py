@@ -96,17 +96,24 @@ class DataLoaderCombined:
 
     def preprocess(self, data, combined_vocab, args):
         processed = []
+        eos_after = args.get('eos_after', False)
         for d in data:
             edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
-            src = [constant.SOS] + src + [constant.EOS]
+            if eos_after:
+                src = [constant.SOS] + src
+            else:
+                src = [constant.SOS] + src + [constant.EOS]
             pos = ['POS=' + d[1]]
             feats = []
             if '|' in d[3]:
                 feats.extend(d[3].split('|'))
             else:
                 feats.append(d[3])
-            inp = src + pos + feats
+            if eos_after:
+                inp = src + pos + feats + [constant.EOS]
+            else:
+                inp = src + pos + feats
             inp = combined_vocab.map(inp)
             processed_sent = [inp]
             if self.lemmatizer is None:

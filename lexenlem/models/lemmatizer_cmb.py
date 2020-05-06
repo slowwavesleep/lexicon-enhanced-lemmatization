@@ -54,6 +54,7 @@ def parse_args():
     parser.add_argument('--no_pos_lexicon', dest='use_pos', action='store_false', help='Do not use word-pos dictionary in the lexicon')
     parser.add_argument('--no_word_lexicon', dest='use_word', action='store_false', help='Do not use word dictionary in the lexicon')
     parser.add_argument('--lexicon_dropout', type=float, default=0.1, help='Probability to drop the word from the lexicon')
+    parser.add_argument('--eos_after', action='store_true', help='Put <EOS> symbol after all the inputs. Otherwise put it after the end of token')
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
     parser.add_argument('--alpha', type=float, default=1.0)
 
@@ -92,7 +93,7 @@ def main():
     print("Running lemmatizer in {} mode".format(args['mode']))
 
     # manually correct for training epochs
-    if args['lang'] in ['cs_pdt', 'ru_syntagrus']:
+    if args['lang'] in ['cs_pdt', 'ru_syntagrus', 'de_hdt']:
         args['num_epoch'] = 30
 
     if args['mode'] == 'train':
@@ -279,7 +280,7 @@ def evaluate(args):
         preds = []
         edits = []
         for i, b in enumerate(batch):
-            ps, es = trainer.predict(b, args['beam_size'])
+            ps, es = trainer.predict(b, args['beam_size'], log_attn=args['log_attn'])
             preds += ps
             if es is not None:
                 edits += es

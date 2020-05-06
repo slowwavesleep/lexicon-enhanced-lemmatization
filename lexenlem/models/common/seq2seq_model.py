@@ -440,9 +440,73 @@ class Seq2SeqModelCombined(Seq2SeqModel):
 
         return log_probs, edit_logits
 
+    def predict_greedy(self, src, src_mask, lem, lem_mask, log_attn):
+        """ Predict with greedy decoding. """
+        enc_inputs = self.embedding(src)
+        batch_size = enc_inputs.size(0)
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
 
-    def predict(self, src, src_mask, lem=None, lem_mask=None, beam_size=5):
+        # encode source
+        h_in, (hn, cn) = self.encode(self.encoder, enc_inputs, src_lens)
+
+        lem_inputs = self.emb_drop(self.embedding(lem))
+        lem_lens = list(lem_mask.data.eq(constant.PAD_ID).long().sum(1))
+        h_in1, (hn1, cn1) = self.encode(self.lexicon_encoder, lem_inputs, lem_lens)
+
+        hn = torch.cat((hn, hn1), 1)
+        cn = torch.cat((cn, cn1), 1)
+
+        hn = self.hn_linear(hn)
+        cn = self.cn_linear(cn)
+
+        if self.edit:
+            edit_logits = self.edit_clf(hn)
+        else:
+            edit_logits = None
+
+        # greedy decode by step
+        dec_inputs = self.embedding(self.SOS_tensor)
+        dec_inputs = dec_inputs.expand(batch_size, dec_inputs.size(0), dec_inputs.size(1))
+
+        done = [False for _ in range(batch_size)]
+        total_done = 0
+        max_len = 0
+        output_seqs = [[] for _ in range(batch_size)]
+
+        attns = []
+        while total_done < batch_size and max_len < self.max_dec_len:
+            log_probs, (hn, cn), attn = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
+            assert log_probs.size(1) == 1, "Output must have 1-step of output."
+            _, preds = log_probs.squeeze(1).max(1, keepdim=True)
+            dec_inputs = self.embedding(preds) # update decoder inputs
+            max_len += 1
+            attns.append([x.tolist() for x in attn])
+            for i in range(batch_size):
+                if not done[i]:
+                    token = preds.data[i][0].item()
+                    if token == constant.EOS_ID:
+                        done[i] = True
+                        total_done += 1
+                    else:
+                        output_seqs[i].append(token)
+
+        if log_attn:
+            print('[Logging attention scores...]')
+            log_attn = {
+                'src': src.tolist(),
+                'lem': lem.tolist(),
+                'attns': attns,
+                'all_hyp': output_seqs
+                }
+            json.dump(log_attn, open('log_attn.json', 'w', encoding='utf-8'))
+
+        return output_seqs, edit_logits
+
+    def predict(self, src, src_mask, lem=None, lem_mask=None, beam_size=5, log_attn=False):
         """ Predict with beam search. """
+        if beam_size == 1:
+            return self.predict_greedy(src, src_mask, lem, lem_mask, log_attn)
+
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
@@ -504,14 +568,6 @@ class Seq2SeqModelCombined(Seq2SeqModel):
 
             if len(done) == batch_size:
                 break
-        
-        if self.log_attn:
-            log_attn = {
-                'src': src.tolist(),
-                'lem': lem.tolist(),
-                'attns': attns
-                }
-            json.dump(log_attn, open('log_attn.json', 'w', encoding='utf-8'))
 
         # back trace and find hypothesis
         all_hyp, all_scores = [], []
@@ -521,7 +577,18 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             k = ks[0]
             hyp = beam[b].get_hyp(k)
             hyp = utils.prune_hyp(hyp)
+            hyp = [i.item() for i in hyp]
             all_hyp += [hyp]
+
+        if log_attn:
+            print('[Logging attention scores...]')
+            log_attn = {
+                'src': src.tolist(),
+                'lem': lem.tolist(),
+                'attns': attns,
+                'all_hyp': [[x.tolist() for x in hyp] for hyp in all_hyp]
+                }
+            json.dump(log_attn, open('log_attn.json', 'w', encoding='utf-8'))
 
         return all_hyp, edit_logits
 
