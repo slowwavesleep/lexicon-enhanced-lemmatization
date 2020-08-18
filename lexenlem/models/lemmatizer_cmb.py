@@ -185,7 +185,7 @@ def train(args):
             for i, batch in enumerate(dev_batch):
                 start_time = time.time()
                 dev_step += 1
-                preds, edits = trainer.predict(batch, args['beam_size'])
+                preds, edits, _ = trainer.predict(batch, args['beam_size'])
                 dev_preds += preds
                 if edits is not None:
                     dev_edits += edits
