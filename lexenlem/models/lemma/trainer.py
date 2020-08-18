@@ -280,7 +280,7 @@ class TrainerCombined(Trainer):
 
         self.model.eval()
         batch_size = src.size(0)
-        preds, edit_logits = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
+        preds, edit_logits, log_attns = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
         pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
@@ -291,7 +291,7 @@ class TrainerCombined(Trainer):
             edits = utils.unsort(edits, orig_idx)
         else:
             edits = None
-        return pred_tokens, edits
+        return pred_tokens, edits, log_attns
 
     def save(self, filename):
         params = {

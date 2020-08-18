@@ -50,6 +50,7 @@ def parse_args():
 
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
     parser.add_argument('--no_edit', dest='edit', action='store_false', help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
+    parser.add_argument('--no_morph', dest='morph', action='store_false', help='Do not use pos and morphological tags as inputs. By default use pos and morphological tags.')
     parser.add_argument('--lemmatizer', type=str, default=None, help='Name of the outer lemmatizer function')
     parser.add_argument('--no_pos_lexicon', dest='use_pos', action='store_false', help='Do not use word-pos dictionary in the lexicon')
     parser.add_argument('--no_word_lexicon', dest='use_word', action='store_false', help='Do not use word dictionary in the lexicon')
@@ -279,11 +280,36 @@ def evaluate(args):
         print("Running the seq2seq model...")
         preds = []
         edits = []
+        log_attns = {}
         for i, b in enumerate(batch):
-            ps, es = trainer.predict(b, args['beam_size'], log_attn=args['log_attn'])
+            ps, es, attns = trainer.predict(b, args['beam_size'], log_attn=args['log_attn'])
+            if attns:
+                for k, _ in attns.items():
+                    if k in log_attns:
+                        if k == 'attns':
+                            if log_attns[k].shape[0] > attns[k].shape[0]:
+                                attns[k] = np.vstack((attns[k], np.zeros((log_attns[k].shape[0] - attns[k].shape[0], attns[k].shape[1], attns[k].shape[2]))))
+                            else:
+                                log_attns[k] = np.vstack((log_attns[k], np.zeros((attns[k].shape[0] - log_attns[k].shape[0], log_attns[k].shape[1], log_attns[k].shape[2]))))
+                            log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=2)
+                        elif k == 'all_hyp':
+                            log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)
+                        else:
+                            if log_attns[k].shape[1] > attns[k].shape[1]:
+                                attns[k] = np.hstack((attns[k], np.zeros((attns[k].shape[0], log_attns[k].shape[1] - attns[k].shape[1]))))
+                            else:
+                                log_attns[k] = np.hstack((log_attns[k], np.zeros((log_attns[k].shape[0], attns[k].shape[1] - log_attns[k].shape[1]))))
+                            log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)
+                    else:
+                        log_attns[k] = attns[k]
             preds += ps
             if es is not None:
                 edits += es
+        if args['log_attn']:
+            lem_name = loaded_args['lemmatizer'] if loaded_args['lemmatizer'] is not None else 'nolexicon'
+            fname = ''.join([args['lang'], '_', lem_name])
+            print(f'[Logging attention to {fname}.npz...]')
+            np.savez(fname, **log_attns)
         preds = trainer.postprocess(batch.conll.get(['word']), preds, edits=edits)
 
         if loaded_args.get('ensemble_dict', False):

@@ -491,16 +491,16 @@ class Seq2SeqModelCombined(Seq2SeqModel):
                         output_seqs[i].append(token)
 
         if log_attn:
-            print('[Logging attention scores...]')
-            log_attn = {
-                'src': src.tolist(),
-                'lem': lem.tolist(),
-                'attns': attns,
-                'all_hyp': output_seqs
+            log_attns = {
+                'src': np.array(src.tolist()),
+                'lem': np.array(lem.tolist()),
+                'attns': np.array(attns),
+                'all_hyp': np.array(output_seqs)
                 }
-            json.dump(log_attn, open('log_attn.json', 'w', encoding='utf-8'))
+        else:
+            log_attns = None
 
-        return output_seqs, edit_logits
+        return output_seqs, edit_logits, log_attns
 
     def predict(self, src, src_mask, lem=None, lem_mask=None, beam_size=5, log_attn=False):
         """ Predict with beam search. """
