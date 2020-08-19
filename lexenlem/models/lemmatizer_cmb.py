@@ -50,7 +50,8 @@ def parse_args():
 
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
     parser.add_argument('--no_edit', dest='edit', action='store_false', help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
-    parser.add_argument('--no_morph', dest='morph', action='store_false', help='Do not use pos and morphological tags as inputs. By default use pos and morphological tags.')
+    parser.add_argument('--no_morph', dest='morph', action='store_false', help='Do not use morphological tags as inputs. By default use pos and morphological tags.')
+    parser.add_argument('--no_pos', dest='pos', action='store_false', help='Do not use pos tags as inputs. By default use pos and morphological tags.')
     parser.add_argument('--lemmatizer', type=str, default=None, help='Name of the outer lemmatizer function')
     parser.add_argument('--no_pos_lexicon', dest='use_pos', action='store_false', help='Do not use word-pos dictionary in the lexicon')
     parser.add_argument('--no_word_lexicon', dest='use_word', action='store_false', help='Do not use word dictionary in the lexicon')

@@ -23,6 +23,7 @@ class DataLoaderCombined:
 
         self.lemmatizer = lemmatizer
         self.morph = args.get('morph', False)
+        self.pos = args.get('pos', False)
 
         # check if input source is a file or a Document object
         if isinstance(input_src, str):
@@ -111,14 +112,13 @@ class DataLoaderCombined:
                 feats.extend(d[3].split('|'))
             else:
                 feats.append(d[3])
-            if eos_after and self.morph:
-                inp = src + pos + feats + [constant.EOS]
-            elif eos_after and not self.morph:
-                inp = src + [constant.EOS]
-            elif not eos_after and self.morph:
-                inp = src + pos + feats
-            else:
-                inp = src
+            inp = src
+            if self.pos:
+                inp += pos
+            if self.morph:
+                inp += feats
+            if eos_after:
+                inp += [constant.EOS]
             inp = combined_vocab.map(inp)
             processed_sent = [inp]
             if self.lemmatizer is None:
