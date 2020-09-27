@@ -304,7 +304,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         self.nlayers = args['num_layers'] # encoder layers, decoder layers = 1
         self.emb_dropout = args.get('emb_dropout', 0.0)
         self.dropout = args['dropout']
-        self.is_lexicon = True if args.get('lemmatizer', False) == 'lexicon' else False
+        self.is_lexicon = False if args.get('lemmatizer', None) is None else True
         self.lexicon_dropout = args['lexicon_dropout']
         self.pad_token = constant.PAD_ID
         self.max_dec_len = args['max_dec_len']
@@ -317,6 +317,8 @@ class Seq2SeqModelCombined(Seq2SeqModel):
 
         print("Building an attentional Seq2Seq model...")
         print("Using a Bi-LSTM encoder")
+        print("Using a lexicon:", self.is_lexicon)
+        print("Lexicon dropout:", self.lexicon_dropout)
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim

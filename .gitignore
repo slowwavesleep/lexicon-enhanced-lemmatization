@@ -119,3 +119,7 @@ saved_models/
 extern_data/
 data/
 run_lemma.sh
+.DS_Store
+lexenlem/.DS_Store
+lexenlem/lemmatizers/.DS_Store
+lexenlem/models/.DS_Store
