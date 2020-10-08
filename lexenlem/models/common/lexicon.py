@@ -50,3 +50,15 @@ class Lexicon:
         if word in self.word_lexicon and self.use_word:
             return list(self.word_lexicon[word])
         return []
+
+
+class ExtendedLexicon:
+    def __init__(self, lexicon, extension):
+        self.lexicon = lexicon
+        self.extension = extension
+
+    def lemmatize(self, word, pos):
+        candidate = self.lexicon.lemmatize(word, pos)
+        if candidate == []:
+            candidate = self.extension.lemmatize(word)
+        return candidate

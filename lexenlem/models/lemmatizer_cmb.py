@@ -24,6 +24,7 @@ from lexenlem.models.lemma.trainer import TrainerCombined
 from lexenlem.models.lemma import scorer, edit
 from lexenlem.models.common import utils
 import lexenlem.models.common.seq2seq_constant as constant
+from lexenlem.models.common.lexicon import ExtendedLexicon
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -253,11 +254,18 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     print("[Loading the outer lemmatizer...]")
+    if args['lemmatizer'] != loaded_args['lemmatizer'] and loaded_args['lemmatizer'] is None:
+        loaded_args['lemmatizer'] = args['lemmatizer']
+    if loaded_args['lemmatizer'] == 'lexicon' and args['lemmatizer'] not in ['lexicon', None]:
+        loaded_args['lemmatizer'] = 'lexicon_extended'
     if loaded_args['lemmatizer'] is None:
         lemmatizer = None
     elif loaded_args['lemmatizer'] == 'lexicon':
         print("[Using the lexicon...]")
         lemmatizer = trainer.lexicon
+    elif loaded_args['lemmatizer'] == 'lexicon_extended':
+        print(f"[Loading the Lexicon extended with the {args['lemmatizer']} lemmatizer...]")
+        lemmatizer = ExtendedLexicon(trainer.lexicon, importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer']))
     else:
         print(f"[Loading the {loaded_args['lemmatizer']} lemmatizer...]")
         lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + loaded_args['lemmatizer'])

@@ -11,7 +11,7 @@ from lexenlem.models.common import conll
 from lexenlem.models.lemma.vocab import Vocab, MultiVocab, FeatureVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
-from lexenlem.models.common.lexicon import Lexicon
+from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
 import json
 
 class DataLoaderCombined:
@@ -22,8 +22,10 @@ class DataLoaderCombined:
         self.shuffled = not self.eval
 
         self.lemmatizer = lemmatizer
-        self.morph = args.get('morph', False)
-        self.pos = args.get('pos', False)
+        self.morph = args.get('morph', True)
+        self.pos = args.get('pos', True)
+        print('Using FEATS:', self.morph)
+        print('Using POS:', self.pos)
 
         # check if input source is a file or a Document object
         if isinstance(input_src, str):
@@ -124,7 +126,7 @@ class DataLoaderCombined:
             if self.lemmatizer is None:
                 lem = [constant.SOS, constant.EOS]
             else:
-                if type(self.lemmatizer) is Lexicon:
+                if type(self.lemmatizer) in [Lexicon, ExtendedLexicon]:
                     lem = self.lemmatizer.lemmatize(d[0], d[1])
                 elif args['lemmatizer'] == 'apertium':
                     lem = self.lemmatizer.lemmatize(d[0], args['lang'].split('_')[0])
