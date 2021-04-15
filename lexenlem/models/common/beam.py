@@ -3,7 +3,7 @@ import torch
 
 import lexenlem.models.common.seq2seq_constant as constant
 
-"""
+r"""
  Adapted and modified from the OpenNMT project.
 
  Class for managing the internals of the beam search process.
@@ -21,22 +21,22 @@ import lexenlem.models.common.seq2seq_constant as constant
 
 
 class Beam(object):
-    def __init__(self, size, cuda=False):
+    def __init__(self, size, device=torch.device("cpu")):
 
         self.size = size
         self.done = False
 
-        self.tt = torch.cuda if cuda else torch
+        self.device = device
 
         # The score for each translation on the beam.
-        self.scores = self.tt.FloatTensor(size).zero_()
+        self.scores = torch.zeros(size, dtype=torch.float, device=self.device)
         self.allScores = []
 
         # The backpointers at each time-step.
         self.prevKs = []
 
         # The outputs at each time-step.
-        self.nextYs = [self.tt.LongTensor(size).fill_(constant.PAD_ID)]
+        self.nextYs = [torch.full(size, constant.PAD_ID, dtype=torch.long, device=self.device)]
         self.nextYs[0][0] = constant.SOS_ID
 
         # The copy indices for each time
@@ -115,16 +115,16 @@ class Beam(object):
         hyp = []
         cpy = []
         for j in range(len(self.prevKs) - 1, -1, -1):
-            hyp.append(self.nextYs[j+1][k])
+            hyp.append(self.nextYs[j + 1][k])
             if len(self.copy) > 0:
                 cpy.append(self.copy[j][k])
             k = self.prevKs[j][k]
-         
+
         hyp = hyp[::-1]
         cpy = cpy[::-1]
         # postprocess: if cpy index is not -1, use cpy index instead of hyp word
-        for i,cidx in enumerate(cpy):
+        for i, cidx in enumerate(cpy):
             if cidx >= 0:
-                hyp[i] = -(cidx+1) # make index 1-based and flip it for token generation
+                hyp[i] = -(cidx + 1)  # make index 1-based and flip it for token generation
 
         return hyp

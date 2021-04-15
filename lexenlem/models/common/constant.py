@@ -1,8 +1,9 @@
 """
 Global constants.
 """
+from typing import Dict
 
-lcode2lang = {
+lcode2lang: Dict[str, str] = {
     "af": "Afrikaans",
     "grc": "Ancient_Greek",
     "ar": "Arabic",
@@ -64,4 +65,4 @@ lcode2lang = {
     "vi": "Vietnamese",
 }
 
-lang2lcode = {lcode2lang[k]: k for k in lcode2lang}
+lang2lcode: Dict[str, str] = {lcode2lang[k]: k for k in lcode2lang}

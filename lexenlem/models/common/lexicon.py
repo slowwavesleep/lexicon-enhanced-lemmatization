@@ -1,6 +1,4 @@
-import random
 from collections import Counter, defaultdict
-import lexenlem.models.common.seq2seq_constant as constant
 
 
 class Lexicon:
@@ -13,17 +11,17 @@ class Lexicon:
         self.use_pos = use_pos
 
         if self.use_pos:
-            print('[Using the word-pos lexicon...]')
+            print("[Using the word-pos lexicon...]")
         if self.use_word:
-            print('[Using the word lexicon...]')
+            print("[Using the word lexicon...]")
 
     def init_unimorph(self):
         ctr = Counter()
-        with open(self.unimorph, encoding='utf-8') as f:
+        with open(self.unimorph, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
-                    line = line.split('\t')
+                    line = line.split("\t")
                     if len(line[1].split()) == 1:
                         lemma, word = line[0], line[1]
                         ctr[(lemma, word)] += 1

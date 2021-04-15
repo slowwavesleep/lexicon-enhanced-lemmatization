@@ -4,15 +4,15 @@ Pytorch implementation of basic sequence to Sequence modules.
 
 import torch
 import torch.nn as nn
-import math
-import numpy as np
 
 import lexenlem.models.common.seq2seq_constant as constant
+
 
 class BasicAttention(nn.Module):
     """
     A basic MLP attention layer.
     """
+
     def __init__(self, dim):
         super(BasicAttention, self).__init__()
         self.linear_in = nn.Linear(dim, dim, bias=False)
@@ -30,10 +30,10 @@ class BasicAttention(nn.Module):
         batch_size = context.size(0)
         source_len = context.size(1)
         dim = context.size(2)
-        target = self.linear_in(input) # batch x dim
+        target = self.linear_in(input)  # batch x dim
         source = self.linear_c(context.contiguous().view(-1, dim)).view(batch_size, source_len, dim)
         attn = target.unsqueeze(1).expand_as(context) + source
-        attn = self.tanh(attn) # batch x sourceL x dim
+        attn = self.tanh(attn)  # batch x sourceL x dim
         attn = self.linear_v(attn.view(-1, dim)).view(batch_size, source_len)
 
         if mask is not None:
@@ -48,6 +48,7 @@ class BasicAttention(nn.Module):
         h_tilde = self.tanh(self.linear_out(h_tilde))
 
         return h_tilde, attn
+
 
 class SoftDotAttention(nn.Module):
     """Soft Dot Attention.
@@ -94,38 +95,15 @@ class SoftDotAttention(nn.Module):
 
         return h_tilde, attn
 
-class MultiHeadAttention(nn.Module):
-    """ Multi-head Attention
-    
-    Ref: https://www.tensorflow.org/tutorials/text/transformer#multi-head_attention"""
-
-    def __init__(self, dim, num_heads):
-        super(MultiHeadAttention, self).__init__()
-        self.dim = dim
-        self.num_heads = num_heads
-
-        assert d_model % self.num_heads == 0
-
-        self.depth = d_model
-
-        self.wq = nn.Linear(dim, dim)
-        self.wk = nn.Linear(dim, dim)
-        self.wv = nn.Linear(dim, dim)
-
-        self.linear = nn.Linear(dim, dim)
-
-    def forward(self, input, context, mask=None, attn_only=False):
-        target = self.linear(input)
-
 
 class LinearAttention(nn.Module):
-    """ A linear attention form, inspired by BiDAF:
-        a = W (u; v; u o v)
+    """A linear attention form, inspired by BiDAF:
+    a = W (u; v; u o v)
     """
 
     def __init__(self, dim):
         super(LinearAttention, self).__init__()
-        self.linear = nn.Linear(dim*3, 1, bias=False)
+        self.linear = nn.Linear(dim * 3, 1, bias=False)
         self.linear_out = nn.Linear(dim * 2, dim, bias=False)
         self.sm = nn.Softmax(dim=1)
         self.tanh = nn.Tanh()
@@ -160,11 +138,12 @@ class LinearAttention(nn.Module):
         h_tilde = self.tanh(self.linear_out(h_tilde))
         return h_tilde, attn
 
+
 class DeepAttention(nn.Module):
-    """ A deep attention form, invented by Robert:
-        u = ReLU(Wx)
-        v = ReLU(Wy)
-        a = V.(u o v)
+    """A deep attention form, invented by Robert:
+    u = ReLU(Wx)
+    v = ReLU(Wy)
+    a = V.(u o v)
     """
 
     def __init__(self, dim):
@@ -206,10 +185,17 @@ class DeepAttention(nn.Module):
         h_tilde = self.tanh(self.linear_out(h_tilde))
         return h_tilde, attn
 
+
 class LSTMAttention(nn.Module):
     r"""A long short-term memory (LSTM) cell with attention."""
 
-    def __init__(self, input_size, hidden_size, batch_first=True, attn_type='soft'):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        batch_first=True,
+        attn_type="soft",
+    ):
         """Initialize params."""
         super(LSTMAttention, self).__init__()
         self.input_size = input_size
@@ -217,26 +203,26 @@ class LSTMAttention(nn.Module):
         self.batch_first = batch_first
 
         self.lstm_cell = nn.LSTMCell(input_size, hidden_size)
-        
-        if attn_type == 'soft':
+
+        if attn_type == "soft":
             self.attention_layer = SoftDotAttention(hidden_size)
-        elif attn_type == 'mlp':
+        elif attn_type == "mlp":
             self.attention_layer = BasicAttention(hidden_size)
-        elif attn_type == 'linear':
+        elif attn_type == "linear":
             self.attention_layer = LinearAttention(hidden_size)
-        elif attn_type == 'deep':
+        elif attn_type == "deep":
             self.attention_layer = DeepAttention(hidden_size)
         else:
             raise Exception("Unsupported LSTM attention type: {}".format(attn_type))
         print("Using {} attention for LSTM.".format(attn_type))
 
     def forward(self, input, hidden, ctx, ctx_mask=None):
-        """Propogate input through the network.""" 
+        """Propogate input through the network."""
         if self.batch_first:
-            input = input.transpose(0,1)
+            input = input.transpose(0, 1)
 
-        #print('dec_input:', input.size())
-        #print('dec_hidden:', hidden[0].size(), hidden[1].size())
+        # print('dec_input:', input.size())
+        # print('dec_hidden:', hidden[0].size(), hidden[1].size())
 
         output = []
         steps = range(input.size(0))
@@ -248,7 +234,7 @@ class LSTMAttention(nn.Module):
         output = torch.cat(output, 0).view(input.size(0), *output[0].size())
 
         if self.batch_first:
-            output = output.transpose(0,1)
+            output = output.transpose(0, 1)
 
         return output, hidden
 
@@ -256,19 +242,32 @@ class LSTMAttention(nn.Module):
 class LSTMDoubleAttention(LSTMAttention):
     r"""A long short-term memory (LSTM) cell with attention."""
 
-    def __init__(self, input_size, hidden_size, batch_first=True, attn_type='soft'):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        batch_first=True,
+        attn_type="soft",
+    ):
         """Initialize params."""
         super().__init__(input_size, hidden_size, batch_first, attn_type)
         self.linear = nn.Linear(hidden_size * 2, hidden_size)
 
-
-    def forward(self, input, hidden, src_ctx, lex_ctx, ctx_mask=None, lex_mask=None):
-        """Propogate input through the network.""" 
+    def forward(
+        self,
+        input,
+        hidden,
+        src_ctx,
+        lex_ctx,
+        ctx_mask=None,
+        lex_mask=None,
+    ):
+        """Propogate input through the network."""
         if self.batch_first:
-            input = input.transpose(0,1)
+            input = input.transpose(0, 1)
 
-        #print('dec_input:', input.size())
-        #print('dec_hidden:', hidden[0].size(), hidden[1].size())
+        # print('dec_input:', input.size())
+        # print('dec_hidden:', hidden[0].size(), hidden[1].size())
 
         output = []
         steps = range(input.size(0))
@@ -283,9 +282,8 @@ class LSTMDoubleAttention(LSTMAttention):
         output = torch.cat(output, 0).view(input.size(0), *output[0].size())
 
         if self.batch_first:
-            output = output.transpose(0,1)
+            output = output.transpose(0, 1)
 
         attn = (attn0, attn1)
 
         return output, hidden, attn
-

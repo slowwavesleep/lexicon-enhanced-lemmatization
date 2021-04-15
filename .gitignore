@@ -103,6 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# VS Code
+.vscode/
+
 # Repository specific ignores
 scripts/test_syntagrus_small.sh
 scripts/test_syntagrus.sh

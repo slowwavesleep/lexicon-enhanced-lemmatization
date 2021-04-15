@@ -1,19 +1,20 @@
 """
 Constants for seq2seq models.
 """
+from typing import List
 
-PAD = '<PAD>'
-PAD_ID = 0
-UNK = '<UNK>'
-UNK_ID = 1
-SOS = '<SOS>'
-SOS_ID = 2
-EOS = '<EOS>'
-EOS_ID = 3
-FILL = '<FILL>'
-FILL_ID = 4
+PAD: str = "<PAD>"
+PAD_ID: int = 0
+UNK: str = "<UNK>"
+UNK_ID: int = 1
+SOS: str = "<SOS>"
+SOS_ID: int = 2
+EOS: str = "<EOS>"
+EOS_ID: int = 3
+FILL: str = "<FILL>"
+FILL_ID: int = 4
 
-VOCAB_PREFIX = [PAD, UNK, SOS, EOS, FILL]
+VOCAB_PREFIX: List[str] = [PAD, UNK, SOS, EOS, FILL]
 
-EMB_INIT_RANGE = 1.0
-INFINITY_NUMBER = 1e12
+EMB_INIT_RANGE: float = 1.0
+INFINITY_NUMBER: int = 1e12

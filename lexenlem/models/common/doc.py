@@ -7,11 +7,10 @@ import re
 
 from lexenlem.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
 
-multi_word_token_line = re.compile("([0-9]+)\-([0-9]+)")
+multi_word_token_line = re.compile(r"([0-9]+)\-([0-9]+)")
 
 
 class Document:
-
     def __init__(self, text):
         self._text = text
         self._conll_file = None
@@ -55,8 +54,8 @@ class Document:
         """ Write conll contents to file. """
         self.conll_file.write_conll(file_path)
 
-class Sentence:
 
+class Sentence:
     def __init__(self, tokens):
         self._tokens = []
         self._words = []
@@ -67,17 +66,17 @@ class Sentence:
             self.build_dependencies()
 
     def _process_tokens(self, tokens):
-        st, en = -1, -1
+        end = -1
         for tok in tokens:
-            m = multi_word_token_line.match(tok[CONLLU_FIELD_TO_IDX['id']])
+            m = multi_word_token_line.match(tok[CONLLU_FIELD_TO_IDX["id"]])
             if m:
-                st, en = int(m.group(1)), int(m.group(2))
+                end = int(m.group(2))
                 self._tokens.append(Token(tok))
             else:
                 new_word = Word(tok)
                 self._words.append(new_word)
-                idx = int(tok[CONLLU_FIELD_TO_IDX['id']])
-                if idx <= en:
+                idx = int(tok[CONLLU_FIELD_TO_IDX["id"]])
+                if idx <= end:
                     self._tokens[-1].words.append(new_word)
                     new_word.parent_token = self._tokens[-1]
                 else:
@@ -120,7 +119,7 @@ class Sentence:
                 governor = Word(["0", "ROOT", "_", "_", "_", "_", "-1", "_", "_", "_", "_", "_"])
             else:
                 # id is index in words list + 1
-                governor = self.words[word.governor-1]
+                governor = self.words[word.governor - 1]
             self.dependencies.append((governor, word.dependency_relation, word))
 
     def print_dependencies(self, file=None):
@@ -152,10 +151,9 @@ class Sentence:
 
 
 class Token:
-
     def __init__(self, token_entry, words=None):
-        self._index = token_entry[CONLLU_FIELD_TO_IDX['id']]
-        self._text = token_entry[CONLLU_FIELD_TO_IDX['word']]
+        self._index = token_entry[CONLLU_FIELD_TO_IDX["id"]]
+        self._text = token_entry[CONLLU_FIELD_TO_IDX["word"]]
         if words is None:
             self.words = []
         else:
@@ -196,26 +194,26 @@ class Token:
     def __repr__(self):
         return f"<{self.__class__.__name__} index={self.index};words={self.words}>"
 
-class Word:
 
+class Word:
     def __init__(self, word_entry):
-        self._index = word_entry[CONLLU_FIELD_TO_IDX['id']]
-        self._text = word_entry[CONLLU_FIELD_TO_IDX['word']]
-        self._lemma = word_entry[CONLLU_FIELD_TO_IDX['lemma']]
-        if self._lemma == '_':
+        self._index = word_entry[CONLLU_FIELD_TO_IDX["id"]]
+        self._text = word_entry[CONLLU_FIELD_TO_IDX["word"]]
+        self._lemma = word_entry[CONLLU_FIELD_TO_IDX["lemma"]]
+        if self._lemma == "_":
             self._lemma = None
-        self._upos = word_entry[CONLLU_FIELD_TO_IDX['upos']]
-        self._xpos = word_entry[CONLLU_FIELD_TO_IDX['xpos']]
-        self._feats = word_entry[CONLLU_FIELD_TO_IDX['feats']]
-        if self._upos == '_':
+        self._upos = word_entry[CONLLU_FIELD_TO_IDX["upos"]]
+        self._xpos = word_entry[CONLLU_FIELD_TO_IDX["xpos"]]
+        self._feats = word_entry[CONLLU_FIELD_TO_IDX["feats"]]
+        if self._upos == "_":
             self._upos = None
             self._xpos = None
             self._feats = None
-        self._governor = word_entry[CONLLU_FIELD_TO_IDX['head']]
-        self._dependency_relation = word_entry[CONLLU_FIELD_TO_IDX['deprel']]
+        self._governor = word_entry[CONLLU_FIELD_TO_IDX["head"]]
+        self._dependency_relation = word_entry[CONLLU_FIELD_TO_IDX["deprel"]]
         self._parent_token = None
         # check if there is dependency information
-        if self._dependency_relation != '_':
+        if self._dependency_relation != "_":
             self._governor = int(self._governor)
         else:
             self._governor = None
@@ -322,7 +320,18 @@ class Word:
         self._index = value
 
     def __repr__(self):
-        features = ['index', 'text', 'lemma', 'upos', 'xpos', 'feats', 'governor', 'dependency_relation']
-        feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
+        features = [
+            "index",
+            "text",
+            "lemma",
+            "upos",
+            "xpos",
+            "feats",
+            "governor",
+            "dependency_relation",
+        ]
+        feature_str = ";".join(
+            ["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None]
+        )
 
         return f"<{self.__class__.__name__} {feature_str}>"
