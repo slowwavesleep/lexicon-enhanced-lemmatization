@@ -212,8 +212,9 @@ class Seq2SeqModel(nn.Module):
                 lem_mask[lem_hide] = lem_mask_stump.repeat(lem_mask[lem_hide].size(0), 1)
 
         lem_inputs = self.emb_drop(self.embedding(lem))
-
-        lem_lens = list(lem_mask.data.eq(constant.PAD_ID).long().sum(1))
+        lem_lens = torch.sum(torch.eq(lem_mask, False), dim=1)
+        if self.device.type == "cuda":
+            lem_lens = lem_lens.detach().cpu()
 
         # Make the mask elements have the same size as encoder outputs
         if lem_mask.size(1) != max(lem_lens).item():
@@ -250,7 +251,9 @@ class Seq2SeqModel(nn.Module):
         h_in, (hn, cn) = self.encode(self.encoder, enc_inputs, src_lens)
 
         lem_inputs = self.emb_drop(self.embedding(lem))
-        lem_lens = list(lem_mask.data.eq(constant.PAD_ID).long().sum(1))
+        lem_lens = torch.sum(torch.eq(lem_mask, False), dim=1)
+        if self.device.type == "cuda":
+            lem_lens = lem_lens.detach().cpu()
         h_in1, (hn1, cn1) = self.encode(self.lexicon_encoder, lem_inputs, lem_lens)
 
         hn = torch.cat((hn, hn1), 1)
@@ -322,7 +325,9 @@ class Seq2SeqModel(nn.Module):
         h_in, (hn, cn) = self.encode(self.encoder, enc_inputs, src_lens)
 
         lem_inputs = self.emb_drop(self.embedding(lem))
-        lem_lens = list(lem_mask.data.eq(constant.PAD_ID).long().sum(1))
+        lem_lens = torch.sum(torch.eq(lem_mask, False), dim=1)
+        if self.device.type == "cuda":
+            lem_lens = lem_lens.detach().cpu()
         h_in1, (hn1, cn1) = self.encode(self.lexicon_encoder, lem_inputs, lem_lens)
 
         hn = torch.cat((hn, hn1), 1)
