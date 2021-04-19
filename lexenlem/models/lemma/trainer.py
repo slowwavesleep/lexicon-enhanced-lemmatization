@@ -60,6 +60,7 @@ class Trainer:
             self.optimizer = utils.get_optimizer(
                 self.args["optim"], self.parameters, self.args["lr"]
             )
+        self.model = torch.jit.script(self.model)
 
     def update(self, batch: BatchItem, eval: bool = False) -> float:
         if eval:
@@ -79,7 +80,7 @@ class Trainer:
         return loss_val
 
     def predict(
-        self, batch: BatchItem, beam_size: int = 1, log_attn: bool = False
+        self, batch: BatchItem, log_attn: bool = False
     ) -> Tuple[List[str], Union[np.array, None]]:
         self.model.eval()
         preds, log_attns = self.model.predict(
@@ -87,7 +88,6 @@ class Trainer:
             batch.src_mask,
             batch.lem,
             batch.lem_mask,
-            beam_size=beam_size,
             log_attn=log_attn,
         )
         pred_seqs = [self.vocab["combined"].unmap(ids) for ids in preds]  # unmap to tokens

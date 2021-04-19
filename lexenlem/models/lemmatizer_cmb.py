@@ -26,19 +26,29 @@ from lexenlem.models.common.lexicon import ExtendedLexicon
 
 
 def _collate_fn(batch):
-    src = pad_sequence([item.src for item in batch], batch_first=True, padding_value=constant.PAD_ID)
+    src = pad_sequence(
+        [item.src for item in batch], batch_first=True, padding_value=constant.PAD_ID
+    )
     src_mask = torch.eq(src, constant.PAD_ID)
-    lem = pad_sequence([item.lem for item in batch], batch_first=True, padding_value=constant.PAD_ID)
+    lem = pad_sequence(
+        [item.lem for item in batch], batch_first=True, padding_value=constant.PAD_ID
+    )
     lem_mask = torch.eq(lem, constant.PAD_ID)
-    tgt_in = pad_sequence([item.tgt_in for item in batch], batch_first=True, padding_value=constant.PAD_ID)
-    tgt_out = pad_sequence([item.tgt_out for item in batch], batch_first=True, padding_value=constant.PAD_ID)
+    tgt_in = pad_sequence(
+        [item.tgt_in for item in batch], batch_first=True, padding_value=constant.PAD_ID
+    )
+    tgt_out = pad_sequence(
+        [item.tgt_out for item in batch], batch_first=True, padding_value=constant.PAD_ID
+    )
     output = BatchItem(src, src_mask, lem, lem_mask, tgt_in, tgt_out)
     return output
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="data/lemma", help="Directory for all lemma data.")
+    parser.add_argument(
+        "--data_dir", type=str, default="data/lemma", help="Directory for all lemma data."
+    )
     parser.add_argument("--unimorph_dir", type=str, default="", help="Directory of unimorph file")
     parser.add_argument("--train_file", type=str, default=None, help="Input file for data loader.")
     parser.add_argument("--eval_file", type=str, default=None, help="Input file for data loader.")
@@ -54,7 +64,9 @@ def parse_args():
         action="store_false",
         help="Do not ensemble dictionary with seq2seq. By default use ensemble.",
     )
-    parser.add_argument("--dict_only", action="store_true", help="Only train a dictionary-based lemmatizer.")
+    parser.add_argument(
+        "--dict_only", action="store_true", help="Only train a dictionary-based lemmatizer."
+    )
 
     parser.add_argument("--hidden_dim", type=int, default=200)
     parser.add_argument("--emb_dim", type=int, default=50)
@@ -62,9 +74,13 @@ def parse_args():
     parser.add_argument("--emb_dropout", type=float, default=0.5)
     parser.add_argument("--dropout", type=float, default=0.5)
     parser.add_argument("--max_dec_len", type=int, default=50)
-    parser.add_argument("--beam_size", type=int, default=1)
 
-    parser.add_argument("--attn_type", default="soft", choices=["soft", "mlp", "linear", "deep"], help="Attention type")
+    parser.add_argument(
+        "--attn_type",
+        default="soft",
+        choices=["soft", "mlp", "linear", "deep"],
+        help="Attention type",
+    )
     parser.add_argument(
         "--no_morph",
         dest="morph",
@@ -77,15 +93,26 @@ def parse_args():
         action="store_false",
         help="Do not use pos tags as inputs. By default use pos and morphological tags.",
     )
-    parser.add_argument("--lemmatizer", type=str, default=None, help="Name of the outer lemmatizer function")
     parser.add_argument(
-        "--no_pos_lexicon", dest="use_pos", action="store_false", help="Do not use word-pos dictionary in the lexicon"
+        "--lemmatizer", type=str, default=None, help="Name of the outer lemmatizer function"
     )
     parser.add_argument(
-        "--no_word_lexicon", dest="use_word", action="store_false", help="Do not use word dictionary in the lexicon"
+        "--no_pos_lexicon",
+        dest="use_pos",
+        action="store_false",
+        help="Do not use word-pos dictionary in the lexicon",
     )
     parser.add_argument(
-        "--lexicon_dropout", type=float, default=0.8, help="Probability to drop the word from the lexicon"
+        "--no_word_lexicon",
+        dest="use_word",
+        action="store_false",
+        help="Do not use word dictionary in the lexicon",
+    )
+    parser.add_argument(
+        "--lexicon_dropout",
+        type=float,
+        default=0.8,
+        help="Probability to drop the word from the lexicon",
     )
     parser.add_argument(
         "--eos_after",
@@ -98,7 +125,9 @@ def parse_args():
     parser.add_argument("--optim", type=str, default="adam", help="sgd, adagrad, adam or adamax.")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     parser.add_argument("--lr_decay", type=float, default=0.9)
-    parser.add_argument("--decay_epoch", type=int, default=30, help="Decay the lr starting from this epoch.")
+    parser.add_argument(
+        "--decay_epoch", type=int, default=30, help="Decay the lr starting from this epoch."
+    )
     parser.add_argument("--num_epoch", type=int, default=60)
     parser.add_argument(
         "--early_stop",
@@ -115,7 +144,9 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=50)
     parser.add_argument("--max_grad_norm", type=float, default=5.0, help="Gradient clipping.")
     parser.add_argument("--log_step", type=int, default=20, help="Print log every k steps.")
-    parser.add_argument("--model_dir", type=str, default="saved_models/lemma", help="Root dir for saving models.")
+    parser.add_argument(
+        "--model_dir", type=str, default="saved_models/lemma", help="Root dir for saving models."
+    )
     parser.add_argument("--log_attn", action="store_true", help="Log attention output.")
 
     parser.add_argument("--seed", type=int, default=1234)
@@ -161,7 +192,9 @@ def train(args):
     else:
         print(f"[Loading the {args['lemmatizer']} lemmatizer...]")
         lemmatizer = importlib.import_module("lexenlem.lemmatizers." + args["lemmatizer"])
-    train_dataset = CoNNLDataset(args["train_file"], args, lemmatizer=lemmatizer, evaluation=False, device=device)
+    train_dataset = CoNNLDataset(
+        args["train_file"], args, lemmatizer=lemmatizer, evaluation=False, device=device
+    )
     vocab = train_dataset.vocab
     if args["lemmatizer"] == "lexicon":
         lemmatizer = train_dataset.lemmatizer
@@ -179,8 +212,12 @@ def train(args):
 
     utils.print_config(args)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args["batch_size"], collate_fn=_collate_fn, shuffle=True)
-    dev_dataloader = DataLoader(dev_dataset, batch_size=args["batch_size"], collate_fn=_collate_fn, shuffle=False)
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=args["batch_size"], collate_fn=_collate_fn, shuffle=True
+    )
+    dev_dataloader = DataLoader(
+        dev_dataset, batch_size=args["batch_size"], collate_fn=_collate_fn, shuffle=False
+    )
 
     # skip training if the language does not have training or dev data
     if len(train_dataloader) == 0 or len(dev_dataloader) == 0:
@@ -245,7 +282,7 @@ def train(args):
             for i, batch in enumerate(dev_dataloader):
                 start_time = time.time()
                 dev_step += 1
-                preds, _ = trainer.predict(batch, args["beam_size"])
+                preds, _ = trainer.predict(batch)
                 dev_preds += preds
                 if dev_step % args["log_step"] == 0:
                     duration = time.time() - start_time
@@ -268,8 +305,14 @@ def train(args):
             dev_dataset.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
-            train_loss = train_loss / train_dataset.num_examples * args["batch_size"]  # avg loss per batch
-            print("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
+            train_loss = (
+                train_loss / train_dataset.num_examples * args["batch_size"]
+            )  # avg loss per batch
+            print(
+                "epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(
+                    epoch, train_loss, dev_score
+                )
+            )
 
             # save best model
             if epoch == 1 or dev_score > max(dev_score_history):
@@ -280,11 +323,19 @@ def train(args):
             if epoch > args["min_epochs"]:
                 if dev_score <= max(dev_score_history):
                     devs_without_improvements += 1
-                    print("{} epochs since last dev score improvement.".format(devs_without_improvements))
+                    print(
+                        "{} epochs since last dev score improvement.".format(
+                            devs_without_improvements
+                        )
+                    )
                 else:
                     devs_without_improvements = 0
             if devs_without_improvements > args["early_stop"]:
-                print("No dev score improvements for {} epocs. Stopping training...".format(args["early_stop"]))
+                print(
+                    "No dev score improvements for {} epocs. Stopping training...".format(
+                        args["early_stop"]
+                    )
+                )
                 break
 
             # lr schedule
@@ -341,8 +392,12 @@ def evaluate(args):
 
     # laod data
     print("Loading data with batch size {}...".format(args["batch_size"]))
-    eval_dataset = CoNNLDataset(args["eval_file"], loaded_args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True)
-    eval_dataloader = DataLoader(eval_dataset, batch_size=args["batch_size"], collate_fn=_collate_fn, shuffle=False)
+    eval_dataset = CoNNLDataset(
+        args["eval_file"], loaded_args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True
+    )
+    eval_dataloader = DataLoader(
+        eval_dataset, batch_size=args["batch_size"], collate_fn=_collate_fn, shuffle=False
+    )
 
     # skip eval if dev data does not exist
     if len(eval_dataloader) == 0:
@@ -360,7 +415,7 @@ def evaluate(args):
         preds = []
         log_attns = {}
         for i, b in enumerate(eval_dataloader):
-            ps, es, attns = trainer.predict(b, args["beam_size"], log_attn=args["log_attn"])
+            ps, es, attns = trainer.predict(b, log_attn=args["log_attn"])
             if attns:
                 for k, _ in attns.items():
                     if k in log_attns:
@@ -397,13 +452,26 @@ def evaluate(args):
                         else:
                             if log_attns[k].shape[1] > attns[k].shape[1]:
                                 attns[k] = np.hstack(
-                                    (attns[k], np.zeros((attns[k].shape[0], log_attns[k].shape[1] - attns[k].shape[1])))
+                                    (
+                                        attns[k],
+                                        np.zeros(
+                                            (
+                                                attns[k].shape[0],
+                                                log_attns[k].shape[1] - attns[k].shape[1],
+                                            )
+                                        ),
+                                    )
                                 )
                             else:
                                 log_attns[k] = np.hstack(
                                     (
                                         log_attns[k],
-                                        np.zeros((log_attns[k].shape[0], attns[k].shape[1] - log_attns[k].shape[1])),
+                                        np.zeros(
+                                            (
+                                                log_attns[k].shape[0],
+                                                attns[k].shape[1] - log_attns[k].shape[1],
+                                            )
+                                        ),
                                     )
                                 )
                             log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)
@@ -411,7 +479,9 @@ def evaluate(args):
                         log_attns[k] = attns[k]
             preds += ps
         if args["log_attn"]:
-            lem_name = loaded_args["lemmatizer"] if loaded_args["lemmatizer"] is not None else "nolexicon"
+            lem_name = (
+                loaded_args["lemmatizer"] if loaded_args["lemmatizer"] is not None else "nolexicon"
+            )
             fname = "".join([args["lang"], "_", lem_name])
             print(f"[Logging attention to {fname}.npz...]")
             np.savez(fname, **log_attns)

@@ -126,3 +126,4 @@ run_lemma.sh
 lexenlem/.DS_Store
 lexenlem/lemmatizers/.DS_Store
 lexenlem/models/.DS_Store
+errors/
