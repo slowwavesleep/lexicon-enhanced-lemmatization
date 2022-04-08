@@ -26,6 +26,7 @@ from lexenlem.models.common import utils
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.lexicon import ExtendedLexicon
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/lemma', help='Directory for all lemma data.')
@@ -38,7 +39,8 @@ def parse_args():
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
 
-    parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
+    parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false',
+                        help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
 
     parser.add_argument('--hidden_dim', type=int, default=200)
@@ -50,14 +52,21 @@ def parse_args():
     parser.add_argument('--beam_size', type=int, default=1)
 
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
-    parser.add_argument('--no_edit', dest='edit', action='store_false', help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
-    parser.add_argument('--no_morph', dest='morph', action='store_false', help='Do not use morphological tags as inputs. By default use pos and morphological tags.')
-    parser.add_argument('--no_pos', dest='pos', action='store_false', help='Do not use pos tags as inputs. By default use pos and morphological tags.')
+    parser.add_argument('--no_edit', dest='edit', action='store_false',
+                        help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
+    parser.add_argument('--no_morph', dest='morph', action='store_false',
+                        help='Do not use morphological tags as inputs. By default use pos and morphological tags.')
+    parser.add_argument('--no_pos', dest='pos', action='store_false',
+                        help='Do not use pos tags as inputs. By default use pos and morphological tags.')
     parser.add_argument('--lemmatizer', type=str, default=None, help='Name of the outer lemmatizer function')
-    parser.add_argument('--no_pos_lexicon', dest='use_pos', action='store_false', help='Do not use word-pos dictionary in the lexicon')
-    parser.add_argument('--no_word_lexicon', dest='use_word', action='store_false', help='Do not use word dictionary in the lexicon')
-    parser.add_argument('--lexicon_dropout', type=float, default=0.8, help='Probability to drop the word from the lexicon')
-    parser.add_argument('--eos_after', action='store_true', help='Put <EOS> symbol after all the inputs. Otherwise put it after the end of token')
+    parser.add_argument('--no_pos_lexicon', dest='use_pos', action='store_false',
+                        help='Do not use word-pos dictionary in the lexicon')
+    parser.add_argument('--no_word_lexicon', dest='use_word', action='store_false',
+                        help='Do not use word dictionary in the lexicon')
+    parser.add_argument('--lexicon_dropout', type=float, default=0.8,
+                        help='Probability to drop the word from the lexicon')
+    parser.add_argument('--eos_after', action='store_true',
+                        help='Put <EOS> symbol after all the inputs. Otherwise put it after the end of token')
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
     parser.add_argument('--alpha', type=float, default=1.0)
 
@@ -67,8 +76,10 @@ def parse_args():
     parser.add_argument('--lr_decay', type=float, default=0.9)
     parser.add_argument('--decay_epoch', type=int, default=30, help="Decay the lr starting from this epoch.")
     parser.add_argument('--num_epoch', type=int, default=60)
-    parser.add_argument('--early_stop', type=int, default=10, help="Stop training if dev score doesn't improve after the specified number of epochs.")
-    parser.add_argument('--min_epochs', type=int, default=10, help="Minimum number of epochs to train before early stopping gets applied.")
+    parser.add_argument('--early_stop', type=int, default=10,
+                        help="Stop training if dev score doesn't improve after the specified number of epochs.")
+    parser.add_argument('--min_epochs', type=int, default=10,
+                        help="Minimum number of epochs to train before early stopping gets applied.")
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
@@ -80,6 +91,7 @@ def parse_args():
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
     args = parser.parse_args()
     return args
+
 
 def main():
     args = parse_args()
@@ -104,6 +116,7 @@ def main():
     else:
         evaluate(args)
 
+
 def train(args):
     # load data
     print("[Loading data with batch size {}...]".format(args['batch_size']))
@@ -115,12 +128,14 @@ def train(args):
     else:
         print(f"[Loading the {args['lemmatizer']} lemmatizer...]")
         lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer'])
-    train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer, evaluation=False)
+    train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer,
+                                     evaluation=False)
     vocab = train_batch.vocab
     if args['lemmatizer'] == 'lexicon':
         lemmatizer = train_batch.lemmatizer
     args['vocab_size'] = vocab['combined'].size
-    dev_batch = DataLoaderCombined(args['eval_file'], args['batch_size'], args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True)
+    dev_batch = DataLoaderCombined(args['eval_file'], args['batch_size'], args, lemmatizer=lemmatizer, vocab=vocab,
+                                   evaluation=True)
 
     utils.ensure_dir(args['model_dir'])
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
@@ -167,18 +182,28 @@ def train(args):
         format_str_dev = '{}: step {}/{} (epoch {}/{}) ({:.3f} sec/batch)'
 
         # start training
-        for epoch in range(1, args['num_epoch']+1):
+        for epoch in range(1, args['num_epoch'] + 1):
             dev_step = 0
             train_loss = 0
             for i, batch in enumerate(train_batch):
                 start_time = time.time()
                 global_step += 1
-                loss = trainer.update(batch, eval=False) # update step
+                loss = trainer.update(batch, eval=False)  # update step
                 train_loss += loss
                 if global_step % args['log_step'] == 0:
                     duration = time.time() - start_time
-                    print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                            max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
+                    print(
+                        format_str.format(
+                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            global_step,
+                            max_steps,
+                            epoch,
+                            args['num_epoch'],
+                            loss,
+                            duration,
+                            current_lr
+                        )
+                    )
 
             # eval on dev
             print("Evaluating on dev set...")
@@ -193,8 +218,8 @@ def train(args):
                     dev_edits += edits
                 if dev_step % args['log_step'] == 0:
                     duration = time.time() - start_time
-                    print(format_str_dev.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), dev_step,\
-                            max_dev_steps, epoch, args['num_epoch'], duration))
+                    print(format_str_dev.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), dev_step, \
+                                                max_dev_steps, epoch, args['num_epoch'], duration))
             dev_preds = trainer.postprocess(dev_batch.conll.get(['word']), dev_preds, edits=dev_edits)
 
             # try ensembling with dict if necessary
@@ -204,7 +229,7 @@ def train(args):
             dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
-            train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
+            train_loss = train_loss / train_batch.num_examples * args['batch_size']  # avg loss per batch
             print("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
 
             # save best model
@@ -235,8 +260,9 @@ def train(args):
 
         print("Training ended with {} epochs.".format(epoch))
 
-        best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
+        best_f, best_epoch = max(dev_score_history) * 100, np.argmax(dev_score_history) + 1
         print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+
 
 def evaluate(args):
     # file paths
@@ -265,14 +291,16 @@ def evaluate(args):
         lemmatizer = trainer.lexicon
     elif loaded_args['lemmatizer'] == 'lexicon_extended':
         print(f"[Loading the Lexicon extended with the {args['lemmatizer']} lemmatizer...]")
-        lemmatizer = ExtendedLexicon(trainer.lexicon, importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer']))
+        lemmatizer = ExtendedLexicon(trainer.lexicon,
+                                     importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer']))
     else:
         print(f"[Loading the {loaded_args['lemmatizer']} lemmatizer...]")
         lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + loaded_args['lemmatizer'])
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoaderCombined(args['eval_file'], args['batch_size'], loaded_args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True)
+    batch = DataLoaderCombined(args['eval_file'], args['batch_size'], loaded_args, lemmatizer=lemmatizer, vocab=vocab,
+                               evaluation=True)
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
@@ -297,17 +325,23 @@ def evaluate(args):
                     if k in log_attns:
                         if k == 'attns':
                             if log_attns[k].shape[0] > attns[k].shape[0]:
-                                attns[k] = np.vstack((attns[k], np.zeros((log_attns[k].shape[0] - attns[k].shape[0], attns[k].shape[1], attns[k].shape[2]))))
+                                attns[k] = np.vstack((attns[k], np.zeros(
+                                    (log_attns[k].shape[0] - attns[k].shape[0], attns[k].shape[1], attns[k].shape[2]))))
                             else:
-                                log_attns[k] = np.vstack((log_attns[k], np.zeros((attns[k].shape[0] - log_attns[k].shape[0], log_attns[k].shape[1], log_attns[k].shape[2]))))
+                                log_attns[k] = np.vstack((log_attns[k], np.zeros((
+                                                                                 attns[k].shape[0] - log_attns[k].shape[
+                                                                                     0], log_attns[k].shape[1],
+                                                                                 log_attns[k].shape[2]))))
                             log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=2)
                         elif k == 'all_hyp':
                             log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)
                         else:
                             if log_attns[k].shape[1] > attns[k].shape[1]:
-                                attns[k] = np.hstack((attns[k], np.zeros((attns[k].shape[0], log_attns[k].shape[1] - attns[k].shape[1]))))
+                                attns[k] = np.hstack((attns[k], np.zeros(
+                                    (attns[k].shape[0], log_attns[k].shape[1] - attns[k].shape[1]))))
                             else:
-                                log_attns[k] = np.hstack((log_attns[k], np.zeros((log_attns[k].shape[0], attns[k].shape[1] - log_attns[k].shape[1]))))
+                                log_attns[k] = np.hstack((log_attns[k], np.zeros(
+                                    (log_attns[k].shape[0], attns[k].shape[1] - log_attns[k].shape[1]))))
                             log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)
                     else:
                         log_attns[k] = attns[k]
@@ -331,7 +365,8 @@ def evaluate(args):
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         print("Lemma score:")
-        print("{} {:.2f}".format(args['lang'], score*100))
+        print("{} {:.2f}".format(args['lang'], score * 100))
+
 
 if __name__ == '__main__':
     main()
