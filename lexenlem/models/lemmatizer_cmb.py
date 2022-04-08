@@ -7,8 +7,6 @@ For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal
 """
 
 import sys
-import os
-import shutil
 import time
 from datetime import datetime
 import argparse
@@ -16,14 +14,11 @@ import numpy as np
 import random
 import torch
 import importlib
-from torch import nn, optim
 
 from lexenlem.models.lemma.data import DataLoaderCombined
-from lexenlem.models.lemma.vocab import Vocab
 from lexenlem.models.lemma.trainer import TrainerCombined
 from lexenlem.models.lemma import scorer, edit
 from lexenlem.models.common import utils
-import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.lexicon import ExtendedLexicon
 
 
