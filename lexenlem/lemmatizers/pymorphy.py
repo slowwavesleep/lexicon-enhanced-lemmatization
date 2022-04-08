@@ -2,6 +2,7 @@ import pymorphy2
 
 morph = pymorphy2.MorphAnalyzer()
 
+
 def lemmatize(token):
     normal_forms = set()
     for p in morph.parse(token):
