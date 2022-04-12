@@ -15,6 +15,7 @@ from lexenlem.models.common import utils, loss
 from lexenlem.models.lemma import edit
 from lexenlem.models.lemma.vocab import MultiVocab
 
+
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
     if use_cuda:
@@ -23,6 +24,7 @@ def unpack_batch(batch, use_cuda):
         inputs = [b if b is not None else None for b in batch[:9]]
     orig_idx = batch[9]
     return inputs, orig_idx
+
 
 def unpack_batch_combined(batch, use_cuda):
     """ Unpack a batch from the data loader. """
