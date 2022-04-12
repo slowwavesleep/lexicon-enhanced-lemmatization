@@ -14,6 +14,7 @@ from lexenlem.models.common.beam import Beam
 
 import json
 
+
 class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.

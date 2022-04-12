@@ -7,11 +7,13 @@ import torch.nn as nn
 
 import lexenlem.models.common.seq2seq_constant as constant
 
+
 def SequenceLoss(vocab_size):
     weight = torch.ones(vocab_size)
     weight[constant.PAD_ID] = 0
     crit = nn.NLLLoss(weight)
     return crit
+
 
 class MixLoss(nn.Module):
     """
@@ -30,6 +32,7 @@ class MixLoss(nn.Module):
         cel = self.ce_loss(class_inputs, class_targets)
         loss = sl + self.alpha * cel
         return loss
+
 
 class MaxEntropySequenceLoss(nn.Module):
     """
