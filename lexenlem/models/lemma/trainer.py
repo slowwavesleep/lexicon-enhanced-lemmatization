@@ -119,13 +119,13 @@ class Trainer:
                 lem = edit.edit_word(w, p, e)
                 edited += [lem]
         else:
-            edited = preds # do not edit
+            edited = preds  # do not edit
         # final sanity check
         assert len(edited) == len(words)
         final = []
         for lem, w in zip(edited, words):
             if len(lem) == 0 or constant.UNK in lem:
-                final += [w] # invalid prediction, fall back to word
+                final += [w]  # invalid prediction, fall back to word
             else:
                 final += [lem]
         return final
