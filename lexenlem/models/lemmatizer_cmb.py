@@ -123,14 +123,16 @@ def train(args):
     else:
         print(f"[Loading the {args['lemmatizer']} lemmatizer...]")
         lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer'])
-    train_batch = DataLoaderCombined(args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer,
-                                     evaluation=False)
+    train_batch = DataLoaderCombined(
+        args['train_file'], args['batch_size'], args, lemmatizer=lemmatizer, evaluation=False
+    )
     vocab = train_batch.vocab
     if args['lemmatizer'] == 'lexicon':
         lemmatizer = train_batch.lemmatizer
     args['vocab_size'] = vocab['combined'].size
-    dev_batch = DataLoaderCombined(args['eval_file'], args['batch_size'], args, lemmatizer=lemmatizer, vocab=vocab,
-                                   evaluation=True)
+    dev_batch = DataLoaderCombined(
+        args['eval_file'], args['batch_size'], args, lemmatizer=lemmatizer, vocab=vocab, evaluation=True
+    )
 
     utils.ensure_dir(args['model_dir'])
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
@@ -213,8 +215,16 @@ def train(args):
                     dev_edits += edits
                 if dev_step % args['log_step'] == 0:
                     duration = time.time() - start_time
-                    print(format_str_dev.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), dev_step, \
-                                                max_dev_steps, epoch, args['num_epoch'], duration))
+                    print(
+                        format_str_dev.format(
+                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            dev_step,
+                            max_dev_steps,
+                            epoch,
+                            args['num_epoch'],
+                            duration
+                        )
+                    )
             dev_preds = trainer.postprocess(dev_batch.conll.get(['word']), dev_preds, edits=dev_edits)
 
             # try ensembling with dict if necessary
