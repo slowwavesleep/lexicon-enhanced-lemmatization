@@ -3,11 +3,10 @@ A trainer class to handle training and testing of models.
 """
 
 import sys
-import numpy as np
 from collections import Counter
+
+import numpy as np
 import torch
-from torch import nn
-import torch.nn.init as init
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.seq2seq_model import Seq2SeqModel, Seq2SeqModelCombined
@@ -36,7 +35,7 @@ def unpack_batch_combined(batch, use_cuda):
     return inputs, orig_idx
 
 
-class Trainer(object):
+class Trainer:
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
@@ -179,13 +178,13 @@ class Trainer(object):
         return skip
 
     def ensemble(self, pairs, other_preds):
-        """ Ensemble the dict with statitical model predictions. """
+        """ Ensemble the dict with statistical model predictions. """
         lemmas = []
         assert len(pairs) == len(other_preds)
         for p, pred in zip(pairs, other_preds):
             w, pos = p
-            if (w,pos) in self.composite_dict:
-                lemmas += [self.composite_dict[(w,pos)]]
+            if (w, pos) in self.composite_dict:
+                lemmas += [self.composite_dict[(w, pos)]]
             elif w in self.word_dict:
                 lemmas += [self.word_dict[w]]
             else:
@@ -219,7 +218,8 @@ class Trainer(object):
             self.model.load_state_dict(checkpoint['model'])
         else:
             self.model = None
-        
+
+
 class TrainerCombined(Trainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
@@ -284,9 +284,9 @@ class TrainerCombined(Trainer):
         self.model.eval()
         batch_size = src.size(0)
         preds, edit_logits, log_attns = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
-        pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds] # unmap to tokens
+        pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds]  # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
-        pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
+        pred_tokens = ["".join(seq) for seq in pred_seqs]  # join chars to be tokens
         pred_tokens = utils.unsort(pred_tokens, orig_idx)
         if self.args.get('edit', False):
             assert edit_logits is not None
