@@ -1,6 +1,4 @@
-import random
 from collections import Counter, defaultdict
-import lexenlem.models.common.seq2seq_constant as constant
 
 
 class Lexicon:
