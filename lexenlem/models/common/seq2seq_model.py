@@ -2,6 +2,8 @@
 The full encoder-decoder model, built on top of the base seq2seq modules.
 """
 
+import json
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -11,8 +13,6 @@ import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common import utils
 from lexenlem.models.common.seq2seq_modules import LSTMAttention, LSTMDoubleAttention
 from lexenlem.models.common.beam import Beam
-
-import json
 
 
 class Seq2SeqModel(nn.Module):

@@ -231,7 +231,7 @@ class LSTMAttention(nn.Module):
         elif attn_type == 'deep':
             self.attention_layer = DeepAttention(hidden_size)
         else:
-            raise Exception("Unsupported LSTM attention type: {}".format(attn_type))
+            raise NotImplementedError("Unsupported LSTM attention type: {}".format(attn_type))
         print("Using {} attention for LSTM.".format(attn_type))
 
     def forward(self, input, hidden, ctx, ctx_mask=None):
