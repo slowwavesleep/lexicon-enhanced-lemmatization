@@ -58,10 +58,17 @@ class Seq2SeqModel(nn.Module):
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
         self.embedding = nn.Embedding(self.vocab_size, self.emb_dim, self.pad_token)
-        self.encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
-                bidirectional=True, batch_first=True, dropout=self.dropout if self.nlayers > 1 else 0)
-        self.decoder = LSTMAttention(self.emb_dim, self.dec_hidden_dim, \
-                batch_first=True, attn_type=self.args['attn_type'])
+        self.encoder = nn.LSTM(
+            self.emb_dim,
+            self.enc_hidden_dim,
+            self.nlayers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=self.dropout if self.nlayers > 1 else 0
+        )
+        self.decoder = LSTMAttention(
+            self.emb_dim, self.dec_hidden_dim, batch_first=True, attn_type=self.args['attn_type']
+        )
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
         if self.use_pos and self.pos_dim > 0:
             print("Using POS in encoder")
