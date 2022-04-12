@@ -77,8 +77,9 @@ class Trainer:
         log_probs, edit_logits = self.model(src, src_mask, tgt_in, pos, feats, lem, lem_mask)
         if self.args.get('edit', False):
             assert edit_logits is not None
-            loss = self.crit(log_probs.view(-1, self.vocab['char'].size), tgt_out.view(-1), \
-                    edit_logits, edits)
+            loss = self.crit(
+                log_probs.view(-1, self.vocab['char'].size), tgt_out.view(-1), edit_logits, edits
+            )
         else:
             loss = self.crit(log_probs.view(-1, self.vocab['char'].size), tgt_out.view(-1))
         loss_val = loss.data.item()
@@ -97,9 +98,9 @@ class Trainer:
         self.model.eval()
         batch_size = src.size(0)
         preds, edit_logits = self.model.predict(src, src_mask, pos=pos, feats=feats, lem=lem, lem_mask=lem_mask, beam_size=beam_size)
-        pred_seqs = [self.vocab['char'].unmap(ids) for ids in preds] # unmap to tokens
+        pred_seqs = [self.vocab['char'].unmap(ids) for ids in preds]  # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
-        pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
+        pred_tokens = ["".join(seq) for seq in pred_seqs]  # join chars to be tokens
         pred_tokens = utils.unsort(pred_tokens, orig_idx)
         if self.args.get('edit', False):
             assert edit_logits is not None
@@ -152,8 +153,8 @@ class Trainer:
         lemmas = []
         for p in pairs:
             w, pos = p
-            if (w,pos) in self.composite_dict:
-                lemmas += [self.composite_dict[(w,pos)]]
+            if (w, pos) in self.composite_dict:
+                lemmas += [self.composite_dict[(w, pos)]]
             elif w in self.word_dict:
                 lemmas += [self.word_dict[w]]
             else:
