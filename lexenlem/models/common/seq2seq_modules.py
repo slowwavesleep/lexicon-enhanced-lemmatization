@@ -67,7 +67,7 @@ class SoftDotAttention(nn.Module):
         self.mask = None
 
     def forward(self, input, context, mask=None, attn_only=False):
-        """Propogate input through the network.
+        """Propagate input through the network.
 
         input: batch x dim
         context: batch x sourceL x dim
@@ -95,29 +95,29 @@ class SoftDotAttention(nn.Module):
 
         return h_tilde, attn
 
-
-class MultiHeadAttention(nn.Module):
-    """ Multi-head Attention
-    
-    Ref: https://www.tensorflow.org/tutorials/text/transformer#multi-head_attention"""
-
-    def __init__(self, dim, num_heads):
-        super(MultiHeadAttention, self).__init__()
-        self.dim = dim
-        self.num_heads = num_heads
-
-        assert d_model % self.num_heads == 0
-
-        self.depth = d_model
-
-        self.wq = nn.Linear(dim, dim)
-        self.wk = nn.Linear(dim, dim)
-        self.wv = nn.Linear(dim, dim)
-
-        self.linear = nn.Linear(dim, dim)
-
-    def forward(self, input, context, mask=None, attn_only=False):
-        target = self.linear(input)
+# unused
+# class MultiHeadAttention(nn.Module):
+#     """ Multi-head Attention
+#
+#     Ref: https://www.tensorflow.org/tutorials/text/transformer#multi-head_attention"""
+#
+#     def __init__(self, dim, num_heads):
+#         super(MultiHeadAttention, self).__init__()
+#         self.dim = dim
+#         self.num_heads = num_heads
+#
+#         # assert d_model % self.num_heads == 0
+#         #
+#         # self.depth = d_model
+#
+#         self.wq = nn.Linear(dim, dim)
+#         self.wk = nn.Linear(dim, dim)
+#         self.wv = nn.Linear(dim, dim)
+#
+#         self.linear = nn.Linear(dim, dim)
+#
+#     def forward(self, input, context, mask=None, attn_only=False):
+#         target = self.linear(input)
 
 
 class LinearAttention(nn.Module):
@@ -235,7 +235,7 @@ class LSTMAttention(nn.Module):
         print("Using {} attention for LSTM.".format(attn_type))
 
     def forward(self, input, hidden, ctx, ctx_mask=None):
-        """Propogate input through the network."""
+        """Propagate input through the network."""
         if self.batch_first:
             input = input.transpose(0, 1)
 

@@ -33,6 +33,7 @@ def unpack_batch_combined(batch, use_cuda):
     orig_idx = batch[7]
     return inputs, orig_idx
 
+
 class Trainer(object):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
