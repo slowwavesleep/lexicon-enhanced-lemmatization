@@ -1,21 +1,28 @@
 import random
-import numpy as np
-import os
-from collections import Counter
+
 import torch
-import sys
 
 import lexenlem.models.common.seq2seq_constant as constant
-from lexenlem.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from lexenlem.models.common.data import get_long_tensor, sort_all
 from lexenlem.models.common import conll
-from lexenlem.models.lemma.vocab import Vocab, MultiVocab, FeatureVocab
+from lexenlem.models.lemma.vocab import Vocab, MultiVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
-import json
+
 
 class DataLoaderCombined:
-    def __init__(self, input_src, batch_size, args, lemmatizer=None, vocab=None, evaluation=False, conll_only=False, skip=None):
+    def __init__(
+            self,
+            input_src,
+            batch_size,
+            args,
+            lemmatizer=None,
+            vocab=None,
+            evaluation=False,
+            conll_only=False,
+            skip=None,
+    ):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -37,7 +44,7 @@ class DataLoaderCombined:
             doc = input_src
             self.conll, data = self.load_doc(doc)
 
-        if conll_only: # only load conll file
+        if conll_only:  # only load conll file
             return
 
         if skip is not None:

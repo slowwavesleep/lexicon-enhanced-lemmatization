@@ -603,4 +603,5 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             }
             json.dump(log_attn, open('log_attn.json', 'w', encoding='utf-8'))
 
+        # TODO: This should match predict_greedy
         return all_hyp, edit_logits

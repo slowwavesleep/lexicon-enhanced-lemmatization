@@ -278,12 +278,13 @@ class TrainerCombined(Trainer):
         self.optimizer.step()
         return loss_val
 
-    def predict(self, batch, beam_size=1, log_attn=False):
+    def predict(self, batch, beam_size: int = 1, log_attn: bool = False):
         inputs, orig_idx = unpack_batch_combined(batch, self.use_cuda)
         src, src_mask, lem, lem_mask, _, _, edits = inputs
 
         self.model.eval()
         batch_size = src.size(0)
+        # not all predicts match this
         preds, edit_logits, log_attns = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
         pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds]  # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)

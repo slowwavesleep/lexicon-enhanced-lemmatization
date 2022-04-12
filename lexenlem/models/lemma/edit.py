@@ -4,6 +4,7 @@ Utilities for calculating edits between word and lemma forms.
 
 EDIT_TO_ID = {'none': 0, 'identity': 1, 'lower': 2}
 
+
 def get_edit_type(word, lemma):
     """ Calculate edit types. """
     if lemma == word:
@@ -11,6 +12,7 @@ def get_edit_type(word, lemma):
     elif lemma == word.lower():
         return 'lower'
     return 'none'
+
 
 def edit_word(word, pred, edit_id):
     """
@@ -23,5 +25,5 @@ def edit_word(word, pred, edit_id):
     elif edit_id == 0:
         return pred
     else:
-        raise Exception("Unrecognized edit ID: {}".format(edit_id))
+        raise NotImplementedError("Unrecognized edit ID: {}".format(edit_id))
 
