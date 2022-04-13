@@ -2,7 +2,7 @@ from collections import Counter, defaultdict
 
 
 class Lexicon:
-    def __init__(self, unimorph=False, use_pos=True, use_word=True):
+    def __init__(self, unimorph: bool = False, use_pos: bool = True, use_word: bool = True):
         self.pos_lexicon = defaultdict(str)
         self.word_lexicon = defaultdict(str)
         self.unimorph_lexicon = defaultdict(str)

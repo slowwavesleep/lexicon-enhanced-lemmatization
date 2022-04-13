@@ -1,4 +1,5 @@
 import random
+from typing import List, Union, Tuple
 
 import torch
 from tqdm.auto import tqdm
@@ -12,7 +13,7 @@ from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
 
 
-def make_feats_data(data, feats_idx=3):
+def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str, List[str]]:
     feats_data = []
     for d in data:
         feats = d[feats_idx]
@@ -23,13 +24,13 @@ def make_feats_data(data, feats_idx=3):
     return feats_data
 
 
-def load_file(filename):
+def load_file(filename: str) -> Tuple[conll.CoNLLFile, List[List[str]]]:
     conll_file = conll.CoNLLFile(filename)
     data = conll_file.get(['word', 'upos', 'lemma', 'feats'])
     return conll_file, data
 
 
-def load_doc(doc):
+def load_doc(doc: Document) -> Tuple[conll.CoNLLFile, List[List[str]]]:
     data = doc.conll_file.get(['word', 'upos', 'lemma', 'feats'])
     return doc.conll_file, data
 
@@ -37,14 +38,14 @@ def load_doc(doc):
 class DataLoaderCombined:
     def __init__(
             self,
-            input_src,
-            batch_size,
-            args,
-            lemmatizer=None,
-            vocab=None,
+            input_src: Union[str, Document],
+            batch_size: int,
+            args: dict,
+            lemmatizer: Union[str, object] = None,
+            vocab: MultiVocab = None,
             evaluation: bool = False,
             conll_only: bool = False,
-            skip=None,
+            skip: List[bool] = None,
     ):
         self.batch_size = batch_size
         self.args = args
@@ -110,7 +111,7 @@ class DataLoaderCombined:
         data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
-    def init_vocab(self, data):
+    def init_vocab(self, data: List[List[str]]) -> Vocab:
         assert self.eval is False, "Vocab file must exist for evaluation"
         char_data = list("".join(d[0] + d[2] for d in data))
         pos_data = ['POS=' + d[1] for d in data]
@@ -119,7 +120,7 @@ class DataLoaderCombined:
         combined_vocab = Vocab(combined_data, self.args['lang'])
         return combined_vocab
 
-    def preprocess(self, data, combined_vocab, args):
+    def preprocess(self, data, combined_vocab, args) -> List[List[List[int], int]]:
         processed = []
         eos_after = args.get('eos_after', False)
         for d in tqdm(data, desc="Preprocessing data..."):
@@ -165,10 +166,10 @@ class DataLoaderCombined:
             processed.append(processed_sent)
         return processed
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Tuple:
         """ Get a batch with index. """
         if not isinstance(key, int):
             raise TypeError

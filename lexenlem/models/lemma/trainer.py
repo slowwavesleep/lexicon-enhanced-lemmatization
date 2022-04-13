@@ -15,7 +15,7 @@ from lexenlem.models.lemma import edit
 from lexenlem.models.lemma.vocab import MultiVocab
 
 
-def unpack_batch(batch, use_cuda):
+def unpack_batch(batch, use_cuda: bool):
     """ Unpack a batch from the data loader. """
     if use_cuda:
         inputs = [b.cuda() if b is not None else None for b in batch[:9]]
@@ -25,7 +25,7 @@ def unpack_batch(batch, use_cuda):
     return inputs, orig_idx
 
 
-def unpack_batch_combined(batch, use_cuda):
+def unpack_batch_combined(batch, use_cuda: bool):
     """ Unpack a batch from the data loader. """
     if use_cuda:
         inputs = [b.cuda() if b is not None else None for b in batch[:7]]
@@ -170,7 +170,7 @@ class Trainer:
         skip = []
         for p in pairs:
             w, pos = p
-            if (w,pos) in self.composite_dict:
+            if (w, pos) in self.composite_dict:
                 skip.append(True)
             elif w in self.word_dict:
                 skip.append(True)
@@ -223,7 +223,7 @@ class Trainer:
 
 class TrainerCombined(Trainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
+    def __init__(self, args: dict = None, vocab=None, emb_matrix=None, model_file: str = None, use_cuda: bool = False):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
@@ -253,7 +253,7 @@ class TrainerCombined(Trainer):
                 self.crit.cpu()
             self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
-    def update(self, batch, eval=False):
+    def update(self, batch, eval: bool = False):
         inputs, _ = unpack_batch_combined(batch, self.use_cuda)
         src, src_mask, lem, lem_mask, tgt_in, tgt_out, edits = inputs
 
@@ -298,7 +298,7 @@ class TrainerCombined(Trainer):
             edits = None
         return pred_tokens, edits, log_attns
 
-    def save(self, filename):
+    def save(self, filename: str):
         params = {
                 'model': self.model.state_dict() if self.model is not None else None,
                 'dicts': (self.word_dict, self.composite_dict),
@@ -312,7 +312,7 @@ class TrainerCombined(Trainer):
         except BaseException:
             print("[Warning: Saving failed... continuing anyway.]")
 
-    def load(self, filename, use_cuda=False):
+    def load(self, filename: str, use_cuda: str = False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
