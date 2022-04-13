@@ -98,7 +98,7 @@ class CoNLLFile:
         for sent in self.sents:
             cursent = []
             for ln in sent:
-                if '-' in ln[0]: # skip
+                if '-' in ln[0]:  # skip
                     continue
                 if len(field_idxs) == 1:
                     cursent += [ln[field_idxs[0]]]
@@ -159,7 +159,7 @@ class CoNLLFile:
         with open(filename, 'w', encoding='utf-8') as outfile:
             for sent in self.sents:
                 for ln in sent:
-                    if '-' not in ln[0]: # do not process if it is a mwt line
+                    if '-' not in ln[0]:  # do not process if it is a mwt line
                         lm = lemmas[idx]
                         if len(lm) == 0:
                             lm = '_'
