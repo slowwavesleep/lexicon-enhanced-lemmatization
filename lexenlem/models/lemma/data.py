@@ -63,9 +63,10 @@ class DataLoaderCombined:
             assert filename.endswith('conllu'), "Loaded file must be conllu file."
             self.conll, data = load_file(filename)
         elif isinstance(input_src, Document):
-            filename = None
             doc = input_src
             self.conll, data = load_doc(doc)
+        else:
+            raise TypeError("Incorrect input format.")
 
         if conll_only:  # only load conll file
             return
