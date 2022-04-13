@@ -7,10 +7,12 @@ from tqdm.auto import tqdm
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.data import get_long_tensor, sort_all
 from lexenlem.models.common import conll
+from lexenlem.models.common.seq2seq_model import Seq2SeqModel, Seq2SeqModelCombined
 from lexenlem.models.lemma.vocab import Vocab, MultiVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
+from lexenlem.preprocessing.vabamorf import basic_preprocessing
 
 
 def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str, List[str]]:
@@ -200,3 +202,32 @@ class DataLoaderCombined:
     def __iter__(self):
         for i in range(self.__len__()):
             yield self.__getitem__(i)
+
+
+class AdHocProcessor:
+
+    def __init__(
+            self,
+            model: Seq2SeqModelCombined,
+            vocab: MultiVocab,
+            lemmatizer: object,
+            use_pos: bool,
+            use_feats: bool,
+    ):
+        self.model = model
+        self.vocab = vocab
+        self.lemmatizer = lemmatizer
+        self.use_pos = use_pos
+        self.use_feats = use_feats
+
+    def lemmatize(self, input_str: str) -> List[str]:
+        preprocessed = basic_preprocessing(input_str)  # token, pos, feats
+        lemma_candidates: List[List[str]] = ...  # [[lemma1, lemma2, ...], [...], ...]
+        lemma_candidates: List[str] = ["".join(lemma_list) for lemma_list in lemma_candidates]
+        batch = []
+        for (surface_form, pos, feats), lemma_candidate in zip(preprocessed, lemma_candidates):
+            ...
+        output_seqs, _, _ = self.model.predict_greedy(src=..., src_mask=..., lem=..., lem_mask=..., log_attn=False)
+        return output_seqs
+
+
