@@ -1,6 +1,7 @@
 import random
 
 import torch
+from tqdm.auto import tqdm
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.data import get_long_tensor, sort_all
@@ -19,8 +20,8 @@ class DataLoaderCombined:
             args,
             lemmatizer=None,
             vocab=None,
-            evaluation=False,
-            conll_only=False,
+            evaluation: bool = False,
+            conll_only: bool = False,
             skip=None,
     ):
         self.batch_size = batch_size
@@ -108,7 +109,7 @@ class DataLoaderCombined:
     def preprocess(self, data, combined_vocab, args):
         processed = []
         eos_after = args.get('eos_after', False)
-        for d in data:
+        for d in tqdm(data):
             edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
             if eos_after:
