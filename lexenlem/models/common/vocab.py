@@ -1,10 +1,6 @@
 from copy import copy
-from collections import Counter, OrderedDict
-import os
-import pickle
+from collections import OrderedDict
 import logging
-
-# logging.basicConfig(level=logging.DEBUG)
 
 PAD = '<PAD>'
 PAD_ID = 0
@@ -21,7 +17,7 @@ class BaseVocab:
     """ A base class for common vocabulary operations. Each subclass should at least 
     implement its own build_vocab() function."""
 
-    def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False):
+    def __init__(self, data=None, lang: str = "", idx: int = 0, cutoff: int = 0, lower: bool = False):
         self.data = data
         self.lang = lang
         self.idx = idx
@@ -92,7 +88,7 @@ class BaseVocab:
 
 
 class CompositeVocab(BaseVocab):
-    ''' Vocabulary class that handles parsing and printing composite values such as
+    """ Vocabulary class that handles parsing and printing composite values such as
     compositional XPOS and universal morphological features (UFeats).
 
     Two key options are `keyed` and `sep`. `sep` specifies the separator used between
@@ -103,7 +99,7 @@ class CompositeVocab(BaseVocab):
     Whenever a part is absent, its internal value is a special `<EMPTY>` symbol that will
     be treated accordingly when generating the output. If `keyed` is `False`, then the parts
     are treated as positioned values, and `<EMPTY>` is used to pad parts at the end when the
-    incoming value is not long enough.'''
+    incoming value is not long enough."""
 
     def __init__(self, data=None, lang="", idx=0, sep="", keyed=False):
         self.sep = sep
@@ -221,7 +217,7 @@ class BaseMultiVocab:
     def __getitem__(self, key):
         return self._vocabs[key]
 
-    def state_dict(self):
+    def state_dict(self) -> OrderedDict:
         """ Build a state dict by iteratively calling state_dict() of all vocabs. """
         state = OrderedDict()
         for k, v in self._vocabs.items():

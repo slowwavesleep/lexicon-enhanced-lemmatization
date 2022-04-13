@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.data import get_long_tensor, sort_all
 from lexenlem.models.common import conll
-from lexenlem.models.common.seq2seq_model import Seq2SeqModel, Seq2SeqModelCombined
+from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
 from lexenlem.models.lemma.vocab import Vocab, MultiVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
