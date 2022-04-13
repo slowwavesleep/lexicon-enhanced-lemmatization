@@ -55,8 +55,8 @@ class ExtendedLexicon:
         self.lexicon = lexicon
         self.extension = extension
 
-    def lemmatize(self, word, pos):
+    def lemmatize(self, word: str, pos: str):
         candidate = self.lexicon.lemmatize(word, pos)
-        if candidate == []:
+        if not candidate:
             candidate = self.extension.lemmatize(word)
         return candidate
