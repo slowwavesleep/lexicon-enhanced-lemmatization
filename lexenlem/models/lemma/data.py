@@ -122,7 +122,7 @@ class DataLoaderCombined:
     def preprocess(self, data, combined_vocab, args):
         processed = []
         eos_after = args.get('eos_after', False)
-        for d in tqdm(data):
+        for d in tqdm(data, desc="Preprocessing data..."):
             edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
             if eos_after:
