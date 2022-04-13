@@ -12,6 +12,28 @@ from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
 
 
+def make_feats_data(data, feats_idx=3):
+    feats_data = []
+    for d in data:
+        feats = d[feats_idx]
+        if '|' in feats:
+            feats_data.extend(feats.split('|'))
+        else:
+            feats_data.append(feats)
+    return feats_data
+
+
+def load_file(filename):
+    conll_file = conll.CoNLLFile(filename)
+    data = conll_file.get(['word', 'upos', 'lemma', 'feats'])
+    return conll_file, data
+
+
+def load_doc(doc):
+    data = doc.conll_file.get(['word', 'upos', 'lemma', 'feats'])
+    return doc.conll_file, data
+
+
 class DataLoaderCombined:
     def __init__(
             self,
@@ -39,11 +61,11 @@ class DataLoaderCombined:
         if isinstance(input_src, str):
             filename = input_src
             assert filename.endswith('conllu'), "Loaded file must be conllu file."
-            self.conll, data = self.load_file(filename)
+            self.conll, data = load_file(filename)
         elif isinstance(input_src, Document):
             filename = None
             doc = input_src
-            self.conll, data = self.load_doc(doc)
+            self.conll, data = load_doc(doc)
 
         if conll_only:  # only load conll file
             return
@@ -69,8 +91,8 @@ class DataLoaderCombined:
         if lemmatizer == 'lexicon':
             print("Building the lexicon...")
             self.lemmatizer = Lexicon(
-                unimorph=args['unimorph_dir'], 
-                use_pos=args.get('use_pos', False), 
+                unimorph=args['unimorph_dir'],
+                use_pos=args.get('use_pos', False),
                 use_word=args.get('use_word', False)
             )
             self.lemmatizer.init_lexicon(data)
@@ -84,24 +106,14 @@ class DataLoaderCombined:
         self.num_examples = len(data)
 
         # chunk into batches
-        data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
+        data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
-
-    def make_feats_data(self, data, feats_idx=3):
-        feats_data = []
-        for d in data:
-            feats = d[feats_idx]
-            if '|' in feats:
-                feats_data.extend(feats.split('|'))
-            else:
-                feats_data.append(feats)
-        return feats_data
 
     def init_vocab(self, data):
         assert self.eval is False, "Vocab file must exist for evaluation"
         char_data = list("".join(d[0] + d[2] for d in data))
         pos_data = ['POS=' + d[1] for d in data]
-        feats_data = self.make_feats_data(data)
+        feats_data = make_feats_data(data)
         combined_data = char_data + pos_data + feats_data
         combined_vocab = Vocab(combined_data, self.args['lang'])
         return combined_vocab
@@ -186,12 +198,3 @@ class DataLoaderCombined:
     def __iter__(self):
         for i in range(self.__len__()):
             yield self.__getitem__(i)
-
-    def load_file(self, filename):
-        conll_file = conll.CoNLLFile(filename)
-        data = conll_file.get(['word', 'upos', 'lemma', 'feats'])
-        return conll_file, data
-
-    def load_doc(self, doc):
-        data = doc.conll_file.get(['word', 'upos', 'lemma', 'feats'])
-        return doc.conll_file, data
