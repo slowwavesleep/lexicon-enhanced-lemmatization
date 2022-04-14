@@ -5,7 +5,7 @@ Utilities for calculating edits between word and lemma forms.
 EDIT_TO_ID = {'none': 0, 'identity': 1, 'lower': 2}
 
 
-def get_edit_type(word, lemma):
+def get_edit_type(word: str, lemma: str) -> str:
     """ Calculate edit types. """
     if lemma == word:
         return 'identity'
@@ -14,7 +14,7 @@ def get_edit_type(word, lemma):
     return 'none'
 
 
-def edit_word(word, pred, edit_id):
+def edit_word(word: str, pred: str, edit_id: int) -> str:
     """
     Edit a word, given edit and seq2seq predictions.
     """
