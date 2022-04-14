@@ -6,6 +6,7 @@ from estnltk.taggers import VabamorfTagger
 
 from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
 from lexenlem.models.common.vabamorf2conll import neural_model_tags
+from lexenlem.models.lemma import edit
 from lexenlem.models.lemma.vocab import MultiVocab
 
 tagger = VabamorfTagger(compound=True, disambiguate=False, guess=False)
@@ -28,7 +29,11 @@ class VabamorfAnalysisConll(BaseAnalysis):
     feats: str
 
 
-# add lemmas?
+# @dataclass
+# class AdHocBatch:
+#     surface_forms: List[List[int]]
+#
+
 def get_vabamorf_analysis(token: str) -> List[VabamorfAnalysis]:
     text = Text(token)
     text.tag_layer(tagger.input_layers)
@@ -65,7 +70,7 @@ def tokenize(raw_text: str) -> List[str]:
     return tokenized
 
 
-def basic_preprocessing(
+def basic_vb_preprocessing(
         raw_text: str, convert_to_conll: bool = True
 ) -> List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]:
     tokenized = tokenize(raw_text)
@@ -84,21 +89,26 @@ class VabamorfAdHocProcessor:
             self,
             model: Seq2SeqModelCombined,
             vocab: MultiVocab,
-            lemmatizer: object,
-            use_pos: bool,
-            use_feats: bool,
-            convert_to_conll: bool,
+            use_pos: bool = True,
+            use_feats: bool = True,
+            eos_after: bool = False,
+            convert_to_conll: bool = True,
     ):
         self.model = model
         self.vocab = vocab
-        self.lemmatizer = lemmatizer
         self.use_pos = use_pos
         self.use_feats = use_feats
+        self.eos_after = eos_after
         self.convert_to_conll = convert_to_conll
 
+    def prepare_batch(self, preprocessed_input: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]):
+
+        for element in preprocessed_input:
+            edit_type = edit.EDIT_TO_ID[edit.get_edit_type(word=element.token, token=element.lemma)]
+            surface_form = element.token
+
     def lemmatize(self, input_str: str) -> List[str]:
-        # token, pos, feats
-        preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = basic_preprocessing(
+        preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = basic_vb_preprocessing(
             input_str, convert_to_conll=self.convert_to_conll
         )
 
