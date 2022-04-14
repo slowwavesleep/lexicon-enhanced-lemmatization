@@ -4,7 +4,9 @@ from typing import List, Union
 from estnltk import Text
 from estnltk.taggers import VabamorfTagger
 
+from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
 from lexenlem.models.common.vabamorf2conll import neural_model_tags
+from lexenlem.models.lemma.vocab import MultiVocab
 
 tagger = VabamorfTagger(compound=True, disambiguate=False, guess=False)
 
@@ -75,3 +77,35 @@ def basic_preprocessing(
         analyzed.append(token_analysis)
     return analyzed
 
+
+class VabamorfAdHocProcessor:
+
+    def __init__(
+            self,
+            model: Seq2SeqModelCombined,
+            vocab: MultiVocab,
+            lemmatizer: object,
+            use_pos: bool,
+            use_feats: bool,
+            convert_to_conll: bool,
+    ):
+        self.model = model
+        self.vocab = vocab
+        self.lemmatizer = lemmatizer
+        self.use_pos = use_pos
+        self.use_feats = use_feats
+        self.convert_to_conll = convert_to_conll
+
+    def lemmatize(self, input_str: str) -> List[str]:
+        # token, pos, feats
+        preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = basic_preprocessing(
+            input_str, convert_to_conll=self.convert_to_conll
+        )
+
+        # lemma_candidates: List[List[str]] = ...  # [[lemma1, lemma2, ...], [...], ...]
+        # lemma_candidates: List[str] = ["".join(lemma_list) for lemma_list in lemma_candidates]
+        # batch = []
+        # for (surface_form, pos, feats), lemma_candidate in zip(preprocessed, lemma_candidates):
+        #     ...
+        # output_seqs, _, _ = self.model.predict_greedy(src=..., src_mask=..., lem=..., lem_mask=..., log_attn=False)
+        # return output_seqs
