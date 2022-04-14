@@ -13,7 +13,7 @@ from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
 
 
-def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str, List[str]]:
+def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str]:
     feats_data = []
     for d in data:
         feats = d[feats_idx]
@@ -21,6 +21,8 @@ def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str, List
             feats_data.extend(feats.split('|'))
         else:
             feats_data.append(feats)
+    # print(all([isinstance(feat, str) for feat in feats_data]))
+    # raise Exception
     return feats_data
 
 
@@ -120,7 +122,8 @@ class DataLoaderCombined:
         combined_vocab = Vocab(combined_data, self.args['lang'])
         return combined_vocab
 
-    def preprocess(self, data, combined_vocab, args) -> List[List[List[int], int]]:
+    # def preprocess(self, data, combined_vocab, args) -> List[List[List[int], int]]:
+    def preprocess(self, data: List[List[str]], combined_vocab, args):
         processed = []
         eos_after = args.get('eos_after', False)
         for d in tqdm(data, desc="Preprocessing data..."):
@@ -136,26 +139,28 @@ class DataLoaderCombined:
                 feats.extend(d[3].split('|'))
             else:
                 feats.append(d[3])
-            inp = src
+            inp: List[str] = src
             if self.pos:
                 inp += pos
             if self.morph:
                 inp += feats
             if eos_after:
                 inp += [constant.EOS]
-            inp = combined_vocab.map(inp)
-            processed_sent = [inp]
+            inp: List[int] = combined_vocab.map(inp)
+            processed_sent: List[List[int]] = [inp]
             if self.lemmatizer is None:
                 lem = [constant.SOS, constant.EOS]
             else:
+                # expected to return list of individual characters
                 if type(self.lemmatizer) in [Lexicon, ExtendedLexicon]:
                     lem = self.lemmatizer.lemmatize(d[0], d[1])
                 elif args['lemmatizer'] == 'apertium':
                     lem = self.lemmatizer.lemmatize(d[0], args['lang'].split('_')[0])
                 else:
-                    lem = self.lemmatizer.lemmatize(d[0])
+                    lem: List[str] = self.lemmatizer.lemmatize(d[0])  # original code
+                    lem: List[str] = list("".join(list(dict.fromkeys(lem))))  # list of chars
                 lem = [constant.SOS] + lem + [constant.EOS]
-            lem = combined_vocab.map(lem)
+            lem: List[int] = combined_vocab.map(lem)
             processed_sent += [lem]
             tgt = list(d[2])
             tgt_in = combined_vocab.map([constant.SOS] + tgt)
@@ -169,7 +174,7 @@ class DataLoaderCombined:
     def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, key) -> Tuple:
+    def __getitem__(self, key: int) -> Tuple:
         """ Get a batch with index. """
         if not isinstance(key, int):
             raise TypeError
