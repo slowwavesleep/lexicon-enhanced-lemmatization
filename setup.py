@@ -14,5 +14,8 @@ setup(
         "regex==2022.3.15",
         "decorator==4.4.2",
         "conllu==4.4.1",
+        "soupsieve==2.3.1",
+        "beautifulsoup4==4.10.0",
+        "traitlets==5.1.1"
     ]
 )
