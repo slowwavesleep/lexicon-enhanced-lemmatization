@@ -16,6 +16,8 @@ setup(
         "conllu==4.4.1",
         "soupsieve==2.3.1",
         "beautifulsoup4==4.10.0",
-        "traitlets==5.1.1"
+        "traitlets==5.1.1",
+        "python-crfsuite==0.9.7",
+        "prompt-toolkit==3.0.29",
     ]
 )
