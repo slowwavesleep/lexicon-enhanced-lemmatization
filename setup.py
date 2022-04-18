@@ -1,10 +1,11 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="lexenlem",
     version="0.0.1",
-    packages=["lexenlem"],
+    packages=find_packages(),
     python_requires=">=3.6",
+    include_package_data=True,
     install_requires=[
         "estnltk==1.7.0rc0",
         "numpy>=1.21.2",
@@ -27,6 +28,5 @@ setup(
         "ipython==7.32.0",
         "cached-property==1.5.2",
         "backcall==0.2.0",
-
     ]
 )
