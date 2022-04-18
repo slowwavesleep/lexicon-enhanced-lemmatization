@@ -21,5 +21,9 @@ setup(
         "prompt-toolkit==3.0.29",
         "pexpect==4.8.0",
         "parso==0.8.3",
+        "ptyprocess==0.7.0",
+        "nltk==3.6.7",
+        "jedi==0.18.1",
+        "ipython==7.32.0",
     ]
 )
