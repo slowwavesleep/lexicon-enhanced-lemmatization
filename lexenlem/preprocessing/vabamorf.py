@@ -8,6 +8,7 @@ from tqdm.auto import tqdm
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
+from lexenlem.models.common.utils import prune_decoded_seqs, unsort
 from lexenlem.models.common.vabamorf2conll import neural_model_tags
 from lexenlem.models.lemma import edit
 from lexenlem.models.lemma.data import DataLoaderCombined
@@ -196,25 +197,45 @@ class VabamorfAdHocProcessor:
 
     def __init__(
             self,
-            model: Seq2SeqModelCombined,
-            vocab: MultiVocab,
-            use_pos: bool = True,
+            path: str,
             use_feats: bool = True,
-            eos_after: bool = False,
             convert_to_conll: bool = True,
             skip_lemma: bool = False,
             use_cuda: bool = False,
     ):
-        self.model = model
-        if use_cuda:
-            self.model.cuda()
-        self.vocab: Vocab = vocab["combined"]
-        self.use_pos = use_pos
-        self.use_feats = use_feats
-        self.eos_after = eos_after
-        self.convert_to_conll = convert_to_conll
-        self.skip_lemma = skip_lemma
+        self.config = None
+        self.word_dict = None
+        self.composite_dict = None
+        self.vocab = None
+        self.lexicon = None
+
         self.use_cuda = use_cuda
+
+        if self.use_cuda:
+            self.device = torch.device("cuda")
+        else:
+            self.device = torch.device("cpu")
+
+        self._init_model(path)
+
+        self.use_pos = self.config["use_pos"]
+        self.eos_after = self.config["eos_after"]
+
+        self.use_feats = use_feats
+        self.skip_lemma = skip_lemma
+
+        self.convert_to_conll = convert_to_conll
+
+    def _init_model(self, path: str):
+        checkpoint = torch.load(path, map_location=self.device)
+        self.config = checkpoint['config']
+        self.word_dict, self.composite_dict = checkpoint['dicts']
+        self.vocab: Vocab = MultiVocab.load_state_dict(checkpoint['vocab'])["combined"]
+        self.lexicon = checkpoint['lexicon']
+        if self.config['dict_only']:
+            raise NotImplementedError
+        self.model = Seq2SeqModelCombined(self.config, self.vocab, use_cuda=self.use_cuda)
+        self.model.load_state_dict(checkpoint['model'])
 
     def lemmatize(self, input_str: str):
         preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = basic_vb_preprocessing(
@@ -239,8 +260,10 @@ class VabamorfAdHocProcessor:
             src=pt_batch.src, src_mask=pt_batch.src_mask, lem=pt_batch.lem, lem_mask=pt_batch.lem_mask, log_attn=False
         )
 
-        # self.vocab.id2unit
+        output_seqs = [self.vocab.unmap(ids) for ids in output_seqs]
 
-        # trainer.predict
+        output_seqs = prune_decoded_seqs(output_seqs)
+        output_seqs = ["".join(seq) for seq in output_seqs]
+        output_seqs = unsort(output_seqs, pt_batch.orig_idx)
 
         return output_seqs
