@@ -25,5 +25,7 @@ setup(
         "nltk==3.6.7",
         "jedi==0.18.1",
         "ipython==7.32.0",
+        "cached-property==1.5.2",
+        "backcall==0.2.0",
     ]
 )
