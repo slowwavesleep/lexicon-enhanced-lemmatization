@@ -7,7 +7,7 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "estnltk==1.7.0rc0",
-        "numpy==1.21.2",
+        "numpy>=1.21.2",
         "torch==1.6.0",
         "tqdm==4.64.0",
         "click==8.1.2",
@@ -27,5 +27,6 @@ setup(
         "ipython==7.32.0",
         "cached-property==1.5.2",
         "backcall==0.2.0",
+
     ]
 )
