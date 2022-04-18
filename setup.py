@@ -19,5 +19,7 @@ setup(
         "traitlets==5.1.1",
         "python-crfsuite==0.9.7",
         "prompt-toolkit==3.0.29",
+        "pexpect==4.8.0",
+        "parso==0.8.3",
     ]
 )
