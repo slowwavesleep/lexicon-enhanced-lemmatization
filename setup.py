@@ -10,5 +10,9 @@ setup(
         "numpy==1.21.2",
         "torch==1.6.0",
         "tqdm==4.64.0",
+        "click==8.1.2",
+        "regex==2022.3.15",
+        "decorator==4.4.2",
+        "conllu==4.4.1",
     ]
 )
