@@ -202,12 +202,18 @@ class VabamorfAdHocProcessor:
             convert_to_conll: bool = True,
             skip_lemma: bool = False,
             use_cuda: bool = False,
+            output_compound_separator: bool = False,
     ):
         self.config = None
         self.word_dict = None
         self.composite_dict = None
         self.vocab = None
         self.lexicon = None
+        self.output_compound_separator = output_compound_separator
+        self.use_feats = use_feats
+        self.skip_lemma = skip_lemma
+
+        self.convert_to_conll = convert_to_conll
 
         self.use_cuda = use_cuda
 
@@ -221,10 +227,7 @@ class VabamorfAdHocProcessor:
         self.use_pos = self.config["use_pos"]
         self.eos_after = self.config["eos_after"]
 
-        self.use_feats = use_feats
-        self.skip_lemma = skip_lemma
-
-        self.convert_to_conll = convert_to_conll
+        self.analyzer = VabamorfAnalyzer(output_compound_separator=self.output_compound_separator)
 
     def _init_model(self, path: str):
         checkpoint = torch.load(path, map_location=self.device)
@@ -267,3 +270,45 @@ class VabamorfAdHocProcessor:
         output_seqs = unsort(output_seqs, pt_batch.orig_idx)
 
         return output_seqs
+
+
+class VabamorfAnalyzer:
+
+    def __init__(
+            self,
+            output_compound_separator: bool = False,
+            convert_to_conllu: bool = False,
+            convert_xpos_to_upos: bool = False,
+    ):
+
+        self.output_compound_separator = output_compound_separator
+        self.convert_to_conllu = convert_to_conllu
+        self.convert_xpos_to_upos = convert_xpos_to_upos
+
+        self.tagger_lemmas = VabamorfTagger(compound=True, disambiguate=False, guess=False)
+        self.tagger_morph = VabamorfTagger(compound=True, disambiguate=True, guess=True)
+
+    def _vb_analyze(self, token: str) -> VabamorfAnalysis:
+
+        text_lemmas = Text(token)
+        text_lemmas.tag_layer(self.tagger_lemmas.input_layers)
+        self.tagger_lemmas.tag(text_lemmas)
+        if self.output_compound_separator:
+            lemmas = list(text_lemmas["morph_analysis"][0].root)
+        else:
+            lemmas = list(text_lemmas["morph_analysis"][0].lemma)
+        lemmas = "".join(lemmas)
+
+        text_morph = Text(token)
+        text_morph.tag_layer(self.tagger_morph.input_layers)
+        self.tagger_morph.tag(text_morph)
+        form = text_morph["morph_analysis"][0].form[0]
+        pos = text_morph["morph_analysis"][0].partofspeech[0]
+
+        return VabamorfAnalysis(token=token, lemma=lemmas, part_of_speech=pos, feats=form)
+
+    def _convert_to_conll(self, vb_analysis: VabamorfAnalysis) -> VabamorfAnalysisConll:
+        pass
+
+    def analyze(self, token: str) -> Union[VabamorfAnalysis, VabamorfAnalysisConll]:
+        pass
