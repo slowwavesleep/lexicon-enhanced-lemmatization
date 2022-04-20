@@ -28,5 +28,6 @@ setup(
         "ipython==7.32.0",
         "cached-property==1.5.2",
         "backcall==0.2.0",
+        "stanza==1.2.3",
     ]
 )

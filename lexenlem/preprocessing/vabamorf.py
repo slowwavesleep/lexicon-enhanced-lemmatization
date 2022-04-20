@@ -108,19 +108,6 @@ def tokenize(raw_text: str) -> List[str]:
     return tokenized
 
 
-def basic_vb_preprocessing(
-        raw_text: str, convert_to_conll: bool = True
-) -> List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]:
-    tokenized = tokenize(raw_text)
-    analyzed = []
-    for token in tokenized:
-        token_analysis = get_vabamorf_analysis(token)[0]
-        if convert_to_conll:
-            token_analysis = convert_vb_to_conll(token_analysis)[0]
-        analyzed.append(token_analysis)
-    return analyzed
-
-
 def prepare_batch(
         preprocessed_input: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]],
         eos_after: bool,
@@ -207,10 +194,11 @@ class VabamorfAdHocProcessor:
             self,
             path: str,
             use_feats: bool = True,
-            convert_to_conll: bool = True,
+            convert_to_conllu: bool = True,
             skip_lemma: bool = False,
             use_cuda: bool = False,
             output_compound_separator: bool = False,
+            use_upos: bool = True,
     ):
         self.config = None
         self.word_dict = None
@@ -220,8 +208,9 @@ class VabamorfAdHocProcessor:
         self.output_compound_separator = output_compound_separator
         self.use_feats = use_feats
         self.skip_lemma = skip_lemma
+        self.use_upos = use_upos
 
-        self.convert_to_conll = convert_to_conll
+        self.convert_to_conllu = convert_to_conllu
 
         self.use_cuda = use_cuda
 
@@ -233,9 +222,14 @@ class VabamorfAdHocProcessor:
         self._init_model(path)
 
         self.use_pos = self.config["use_pos"]
+
         self.eos_after = self.config["eos_after"]
 
-        self.analyzer = VabamorfAnalyzer(output_compound_separator=self.output_compound_separator)
+        self.analyzer = VabamorfAnalyzer(
+            output_compound_separator=self.output_compound_separator,
+            convert_to_conllu=self.convert_to_conllu,
+            use_upos=True,
+        )
 
     def _init_model(self, path: str):
         checkpoint = torch.load(path, map_location=self.device)
@@ -248,10 +242,16 @@ class VabamorfAdHocProcessor:
         self.model = Seq2SeqModelCombined(self.config, self.vocab, use_cuda=self.use_cuda)
         self.model.load_state_dict(checkpoint['model'])
 
+    def preprocess_text(self, raw_text: str) -> List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]:
+        tokenized = tokenize(raw_text)
+        analyzed = []
+        for token in tokenized:
+            token_analysis = self.analyzer.analyze(token)
+            analyzed.append(token_analysis)
+        return analyzed
+
     def lemmatize(self, input_str: str):
-        preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = basic_vb_preprocessing(
-            input_str, convert_to_conll=self.convert_to_conll
-        )
+        preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = self.preprocess_text(input_str)
 
         raw_batch = prepare_batch(
             preprocessed,
@@ -338,7 +338,7 @@ class VabamorfAnalyzer:
     def analyze(self, token: str) -> Union[VabamorfAnalysis, VabamorfAnalysisConll]:
         analysis = self._vb_analyze(token)
         if self.convert_to_conllu:
-            analysis = convert_vb_to_conll(analysis)[0]
+            analysis = convert_vb_to_conll(analysis)[0]  # first candidate of ambiguous list
         if self.use_upos:
             analysis = self._add_external_upos(analysis)
         return analysis
