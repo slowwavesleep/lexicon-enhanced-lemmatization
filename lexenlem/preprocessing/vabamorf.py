@@ -33,6 +33,7 @@ class VabamorfAnalysis(BaseAnalysis):
 @dataclass
 class VabamorfAnalysisConll(BaseAnalysis):
     feats: str
+    xpos: bool = True
 
 
 @dataclass
@@ -71,9 +72,16 @@ def get_vabamorf_analysis(token: str) -> List[VabamorfAnalysis]:
     forms = text["morph_analysis"][0].form
     parts_of_speech = text["morph_analysis"][0].partofspeech
     return [
-        VabamorfAnalysis(token=token, lemma=lemma, part_of_speech=part_of_speech, feats=form)
+        VabamorfAnalysis(token=token, lemma=lemma, part_of_speech=f"POS={part_of_speech}", feats=form)
         for lemma, part_of_speech, form in zip(lemmas, parts_of_speech, forms)
     ]
+
+
+def remove_pos_from_feats(feats: str) -> str:
+    if "POS=" not in feats:
+        return feats
+    feats = feats.split("|")
+    return "".join([feat for feat in feats if "POS=" not in feat])
 
 
 def convert_vb_to_conll(vb_analysis: VabamorfAnalysis) -> List[VabamorfAnalysisConll]:
@@ -84,7 +92,7 @@ def convert_vb_to_conll(vb_analysis: VabamorfAnalysis) -> List[VabamorfAnalysisC
             token=vb_analysis.token,
             lemma=vb_analysis.lemma,
             part_of_speech=vb_analysis.part_of_speech,
-            feats=feats_candidate,
+            feats=remove_pos_from_feats(feats_candidate),
         )
         for feats_candidate in candidates
     ]
@@ -120,7 +128,6 @@ def prepare_batch(
         skip_lemma: bool,
         vocab: Vocab,
 ) -> List[AdHocInput]:
-
     batch = []
 
     for element in tqdm(preprocessed_input, desc="Preparing raw batch..."):
@@ -278,12 +285,12 @@ class VabamorfAnalyzer:
             self,
             output_compound_separator: bool = False,
             convert_to_conllu: bool = False,
-            convert_xpos_to_upos: bool = False,
+            use_upos: bool = False,
     ):
 
         self.output_compound_separator = output_compound_separator
         self.convert_to_conllu = convert_to_conllu
-        self.convert_xpos_to_upos = convert_xpos_to_upos
+        self.use_upos = use_upos
 
         self.tagger_lemmas = VabamorfTagger(compound=True, disambiguate=False, guess=False)
         self.tagger_morph = VabamorfTagger(compound=True, disambiguate=True, guess=True)
@@ -307,8 +314,15 @@ class VabamorfAnalyzer:
 
         return VabamorfAnalysis(token=token, lemma=lemmas, part_of_speech=pos, feats=form)
 
-    def _convert_to_conll(self, vb_analysis: VabamorfAnalysis) -> VabamorfAnalysisConll:
-        pass
+    def _add_external_pos(self, analysis: VabamorfAnalysisConll) -> VabamorfAnalysisConll:
+        # analysis.xpos = False
+        ...
+
 
     def analyze(self, token: str) -> Union[VabamorfAnalysis, VabamorfAnalysisConll]:
-        pass
+        analysis = self._vb_analyze(token)
+        if self.convert_to_conllu:
+            analysis = convert_vb_to_conll(analysis)
+        if self.use_upos:
+            analysis = self._add_external_pos(analysis)
+        return analysis
