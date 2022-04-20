@@ -5,6 +5,7 @@ import torch
 from estnltk import Text
 from estnltk.taggers import VabamorfTagger
 from tqdm.auto import tqdm
+import stanza
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
@@ -81,7 +82,7 @@ def remove_pos_from_feats(feats: str) -> str:
     if "POS=" not in feats:
         return feats
     feats = feats.split("|")
-    return "".join([feat for feat in feats if "POS=" not in feat])
+    return "|".join([feat for feat in feats if "POS=" not in feat])
 
 
 def convert_vb_to_conll(vb_analysis: VabamorfAnalysis) -> List[VabamorfAnalysisConll]:
@@ -279,6 +280,15 @@ class VabamorfAdHocProcessor:
         return output_seqs
 
 
+class StanzaTagger:
+    def __init__(self):
+        stanza.download("et")
+        self.pipe = stanza.Pipeline(lang="et", processors="tokenize,pos")
+
+    def upos_tag(self, token: str) -> str:
+        return self.pipe(token).sentences[0].words[0].upos
+
+
 class VabamorfAnalyzer:
 
     def __init__(
@@ -294,6 +304,11 @@ class VabamorfAnalyzer:
 
         self.tagger_lemmas = VabamorfTagger(compound=True, disambiguate=False, guess=False)
         self.tagger_morph = VabamorfTagger(compound=True, disambiguate=True, guess=True)
+
+        self.external_tagger = None
+
+        if self.use_upos:
+            self.external_tagger = StanzaTagger()
 
     def _vb_analyze(self, token: str) -> VabamorfAnalysis:
 
@@ -314,15 +329,16 @@ class VabamorfAnalyzer:
 
         return VabamorfAnalysis(token=token, lemma=lemmas, part_of_speech=pos, feats=form)
 
-    def _add_external_pos(self, analysis: VabamorfAnalysisConll) -> VabamorfAnalysisConll:
-        # analysis.xpos = False
-        ...
-
+    def _add_external_upos(self, analysis: Union[VabamorfAnalysis, VabamorfAnalysisConll]) -> VabamorfAnalysisConll:
+        upos = self.external_tagger.upos_tag(analysis.token)
+        analysis.part_of_speech = upos
+        analysis.xpos = False
+        return analysis
 
     def analyze(self, token: str) -> Union[VabamorfAnalysis, VabamorfAnalysisConll]:
         analysis = self._vb_analyze(token)
         if self.convert_to_conllu:
-            analysis = convert_vb_to_conll(analysis)
+            analysis = convert_vb_to_conll(analysis)[0]
         if self.use_upos:
-            analysis = self._add_external_pos(analysis)
+            analysis = self._add_external_upos(analysis)
         return analysis
