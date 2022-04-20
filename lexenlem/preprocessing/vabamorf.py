@@ -73,7 +73,7 @@ def get_vabamorf_analysis(token: str) -> List[VabamorfAnalysis]:
     forms = text["morph_analysis"][0].form
     parts_of_speech = text["morph_analysis"][0].partofspeech
     return [
-        VabamorfAnalysis(token=token, lemma=lemma, part_of_speech=f"POS={part_of_speech}", feats=form)
+        VabamorfAnalysis(token=token, lemma=lemma, part_of_speech=part_of_speech, feats=form)
         for lemma, part_of_speech, form in zip(lemmas, parts_of_speech, forms)
     ]
 
@@ -199,6 +199,7 @@ class VabamorfAdHocProcessor:
             use_cuda: bool = False,
             output_compound_separator: bool = False,
             use_upos: bool = True,
+            use_dict: bool = True,
     ):
         self.config = None
         self.word_dict = None
@@ -209,6 +210,7 @@ class VabamorfAdHocProcessor:
         self.use_feats = use_feats
         self.skip_lemma = skip_lemma
         self.use_upos = use_upos
+        self.use_dict = use_dict
 
         self.convert_to_conllu = convert_to_conllu
 
@@ -250,6 +252,14 @@ class VabamorfAdHocProcessor:
             analyzed.append(token_analysis)
         return analyzed
 
+    def lemmatize_dict(
+            self, preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]
+    ) -> List[Union[str, None]]:
+        if self.use_pos:
+            return [self.composite_dict.get((el.token, el.part_of_speech), None) for el in preprocessed]
+        else:
+            return [self.word_dict.get((el.token, el.part_of_speech), None) for el in preprocessed]
+
     def lemmatize(self, input_str: str):
         preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = self.preprocess_text(input_str)
 
@@ -276,6 +286,16 @@ class VabamorfAdHocProcessor:
         output_seqs = prune_decoded_seqs(output_seqs)
         output_seqs = ["".join(seq) for seq in output_seqs]
         output_seqs = unsort(output_seqs, pt_batch.orig_idx)
+
+        if self.use_dict and self.use_pos:
+            tmp = []
+            d_lemmatized = self.lemmatize_dict(preprocessed)
+            for d_lemma, hypothesis in zip(d_lemmatized, output_seqs):
+                if not d_lemma:
+                    tmp.append(hypothesis)
+                else:
+                    tmp.append(d_lemma)
+            output_seqs = tmp
 
         return output_seqs
 
