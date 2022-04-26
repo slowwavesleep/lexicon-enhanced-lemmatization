@@ -11,30 +11,9 @@ from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
 from lexenlem.models.common.utils import prune_decoded_seqs, unsort
 from lexenlem.models.common.vabamorf2conll import neural_model_tags
 from lexenlem.models.lemma import edit
-from lexenlem.models.lemma.data import DataLoaderCombined
 from lexenlem.models.lemma.vocab import MultiVocab, Vocab
 from lexenlem.models.common.data import get_long_tensor, sort_all
-from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline
-
-tagger = VabamorfTagger(compound=True, disambiguate=False, guess=False)
-
-
-@dataclass
-class BaseAnalysis:
-    token: str
-    lemma: str
-    part_of_speech: str
-
-
-@dataclass
-class VabamorfAnalysis(BaseAnalysis):
-    feats: str
-
-
-@dataclass
-class VabamorfAnalysisConll(BaseAnalysis):
-    feats: str
-    xpos: bool = True
+from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline, VbTokenAnalysis
 
 
 @dataclass
@@ -65,42 +44,8 @@ class AdHocModelInput:
         self.lem_mask.cpu()
 
 
-def get_vabamorf_analysis(token: str) -> List[VabamorfAnalysis]:
-    text = Text(token)
-    text.tag_layer(tagger.input_layers)
-    tagger.tag(text)
-    lemmas = text["morph_analysis"][0].root
-    forms = text["morph_analysis"][0].form
-    parts_of_speech = text["morph_analysis"][0].partofspeech
-    return [
-        VabamorfAnalysis(token=token, lemma=lemma, part_of_speech=part_of_speech, feats=form)
-        for lemma, part_of_speech, form in zip(lemmas, parts_of_speech, forms)
-    ]
-
-
-def remove_pos_from_feats(feats: str) -> str:
-    if "POS=" not in feats:
-        return feats
-    feats = feats.split("|")
-    return "|".join([feat for feat in feats if "POS=" not in feat])
-
-
-def convert_vb_to_conll(vb_analysis: VabamorfAnalysis) -> List[VabamorfAnalysisConll]:
-    # conversion from vb to conll may be ambiguous
-    candidates: List[str] = neural_model_tags(vb_analysis.token, vb_analysis.part_of_speech, vb_analysis.feats)
-    return [
-        VabamorfAnalysisConll(
-            token=vb_analysis.token,
-            lemma=vb_analysis.lemma,
-            part_of_speech=vb_analysis.part_of_speech,
-            feats=remove_pos_from_feats(feats_candidate),
-        )
-        for feats_candidate in candidates
-    ]
-
-
 def prepare_batch(
-        preprocessed_input: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]],
+        preprocessed_input: List[VbTokenAnalysis],
         eos_after: bool,
         use_pos: bool,
         use_feats: bool,
@@ -109,12 +54,10 @@ def prepare_batch(
 ) -> List[AdHocInput]:
     batch = []
 
-    for element in tqdm(preprocessed_input, desc="Preparing raw batch...", disable=True):
+    for element in preprocessed_input:
 
-        if isinstance(element, VabamorfAnalysis):
-            raise NotImplementedError("Vabamorf output format not supported at the moment.")
-
-        edit_type: int = edit.EDIT_TO_ID[edit.get_edit_type(word=element.token, lemma=element.lemma)]
+        # edit_type: int = edit.EDIT_TO_ID[edit.get_edit_type(word=element.token, lemma=element.lemma)]
+        edit_type: int = edit.EDIT_TO_ID["none"]
 
         surface_form: List[str] = list(element.token)
         if eos_after:
@@ -122,9 +65,9 @@ def prepare_batch(
         else:
             surface_form = [constant.SOS] + surface_form + [constant.EOS]
 
-        part_of_speech: List[str] = [f"POS={element.part_of_speech}"]
+        part_of_speech: List[str] = [element.part_of_speech]
 
-        feats: List[str] = element.feats.split("|")
+        feats: List[str] = [element.features]
 
         src_input = []
         src_input += surface_form
@@ -138,8 +81,7 @@ def prepare_batch(
         if skip_lemma:
             lemma_input = [constant.SOS, constant.EOS]
         else:
-            # TODO: account for a list of lemmas
-            lemma_input = [constant.SOS, *list(element.lemma), constant.EOS]
+            lemma_input = [constant.SOS, *list(element.processed_lemma_candidates), constant.EOS]
 
         input_element = AdHocInput(
             src_input=vocab.map(src_input), lemma_input=vocab.map(lemma_input), edit_type=edit_type
@@ -168,15 +110,6 @@ def process_batch(raw_batch: List[AdHocInput]) -> AdHocModelInput:
     lem_mask = torch.eq(lem, constant.PAD_ID)
 
     return AdHocModelInput(src, src_mask, lem, lem_mask, orig_idx)
-
-
-def save_vocab(dataloader: DataLoaderCombined, filename: str):
-    params = {"vocab": dataloader.vocab.state_dict()}
-    torch.save(params, filename)
-
-
-def load_vocab(filename: str) -> MultiVocab:
-    return MultiVocab.load_state_dict(torch.load(filename)["vocab"])
 
 
 class VabamorfAdHocProcessor:
@@ -232,16 +165,11 @@ class VabamorfAdHocProcessor:
         self.model.eval()
         self.model.load_state_dict(checkpoint['model'])
 
-    def preprocess_text(self, raw_text: str) -> List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]:
-        tokenized = tokenize(raw_text)
-        analyzed = []
-        for token in tokenized:
-            token_analysis = self.analyzer.analyze(token)
-            analyzed.append(token_analysis)
-        return analyzed
+    def preprocess_text(self, raw_text: str) -> List[VbTokenAnalysis]:
+        return self.analyzer(raw_text)[0]
 
     def lemmatize_dict(
-            self, preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]
+            self, preprocessed: List[VbTokenAnalysis]
     ) -> List[Union[str, None]]:
         if self.use_pos:
             return [self.composite_dict.get((el.token, el.part_of_speech), None) for el in preprocessed]
@@ -249,7 +177,7 @@ class VabamorfAdHocProcessor:
             return [self.word_dict.get((el.token, el.part_of_speech), None) for el in preprocessed]
 
     def lemmatize(self, input_str: str):
-        preprocessed: List[Union[VabamorfAnalysis, VabamorfAnalysisConll]] = self.preprocess_text(input_str)
+        preprocessed: List[VbTokenAnalysis] = self.preprocess_text(input_str)
 
         raw_batch = prepare_batch(
             preprocessed,
