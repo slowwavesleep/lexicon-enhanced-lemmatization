@@ -118,7 +118,7 @@ def prepare_batch(
 ) -> List[AdHocInput]:
     batch = []
 
-    for element in tqdm(preprocessed_input, desc="Preparing raw batch..."):
+    for element in tqdm(preprocessed_input, desc="Preparing raw batch...", disable=True):
 
         if isinstance(element, VabamorfAnalysis):
             raise NotImplementedError("Vabamorf output format not supported at the moment.")
@@ -242,6 +242,7 @@ class VabamorfAdHocProcessor:
         if self.config['dict_only']:
             raise NotImplementedError
         self.model = Seq2SeqModelCombined(self.config, self.vocab, use_cuda=self.use_cuda)
+        self.model.eval()
         self.model.load_state_dict(checkpoint['model'])
 
     def preprocess_text(self, raw_text: str) -> List[Union[VabamorfAnalysis, VabamorfAnalysisConll]]:

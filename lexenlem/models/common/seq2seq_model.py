@@ -339,13 +339,27 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
         self.embedding = nn.Embedding(self.vocab_size, self.emb_dim, self.pad_token)
-        self.encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
-                               bidirectional=True, batch_first=True, dropout=self.dropout if self.nlayers > 1 else 0)
-        self.lexicon_encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
-                                       bidirectional=True, batch_first=True,
-                                       dropout=self.dropout if self.nlayers > 1 else 0)
-        self.decoder = LSTMDoubleAttention(self.emb_dim, self.dec_hidden_dim, \
-                                           batch_first=True, attn_type=self.args['attn_type'])
+        self.encoder = nn.LSTM(
+            self.emb_dim,
+            self.enc_hidden_dim,
+            self.nlayers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=self.dropout if self.nlayers > 1 else 0,
+        )
+        self.lexicon_encoder = nn.LSTM(
+            self.emb_dim,
+            self.enc_hidden_dim,
+            self.nlayers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=self.dropout if self.nlayers > 1 else 0,
+        )
+        self.decoder = LSTMDoubleAttention(
+            self.emb_dim,
+            self.dec_hidden_dim,
+            batch_first=True, attn_type=self.args['attn_type']
+        )
         self.hn_linear = nn.Linear(self.enc_hidden_dim * 4, self.enc_hidden_dim * 2)
         self.cn_linear = nn.Linear(self.enc_hidden_dim * 4, self.enc_hidden_dim * 2)
         self.h_in_linear = nn.Linear(self.enc_hidden_dim * 2, self.enc_hidden_dim)
