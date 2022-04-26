@@ -5,7 +5,6 @@ import torch
 from estnltk import Text
 from estnltk.taggers import VabamorfTagger
 from tqdm.auto import tqdm
-import stanza
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
@@ -299,67 +298,3 @@ class VabamorfAdHocProcessor:
             output_seqs = tmp
 
         return output_seqs
-
-
-class StanzaTagger:
-    def __init__(self):
-        stanza.download("et")
-        self.pipe = stanza.Pipeline(lang="et", processors="tokenize,pos")
-
-    def upos_tag(self, token: str) -> str:
-        return self.pipe(token).sentences[0].words[0].upos
-
-
-class VabamorfAnalyzer:
-
-    def __init__(
-            self,
-            output_compound_separator: bool = False,
-            convert_to_conllu: bool = False,
-            use_upos: bool = False,
-    ):
-
-        self.output_compound_separator = output_compound_separator
-        self.convert_to_conllu = convert_to_conllu
-        self.use_upos = use_upos
-
-        self.tagger_lemmas = VabamorfTagger(compound=True, disambiguate=False, guess=False)
-        self.tagger_morph = VabamorfTagger(compound=True, disambiguate=True, guess=True)
-
-        self.external_tagger = None
-
-        if self.use_upos:
-            self.external_tagger = StanzaTagger()
-
-    def _vb_analyze(self, token: str) -> VabamorfAnalysis:
-
-        text_lemmas = Text(token)
-        text_lemmas.tag_layer(self.tagger_lemmas.input_layers)
-        self.tagger_lemmas.tag(text_lemmas)
-        if self.output_compound_separator:
-            lemmas = list(text_lemmas["morph_analysis"][0].root)
-        else:
-            lemmas = list(text_lemmas["morph_analysis"][0].lemma)
-        lemmas = "".join(lemmas)
-
-        text_morph = Text(token)
-        text_morph.tag_layer(self.tagger_morph.input_layers)
-        self.tagger_morph.tag(text_morph)
-        form = text_morph["morph_analysis"][0].form[0]
-        pos = text_morph["morph_analysis"][0].partofspeech[0]
-
-        return VabamorfAnalysis(token=token, lemma=lemmas, part_of_speech=pos, feats=form)
-
-    def _add_external_upos(self, analysis: Union[VabamorfAnalysis, VabamorfAnalysisConll]) -> VabamorfAnalysisConll:
-        upos = self.external_tagger.upos_tag(analysis.token)
-        analysis.part_of_speech = upos
-        analysis.xpos = False
-        return analysis
-
-    def analyze(self, token: str) -> Union[VabamorfAnalysis, VabamorfAnalysisConll]:
-        analysis = self._vb_analyze(token)
-        if self.convert_to_conllu:
-            analysis = convert_vb_to_conll(analysis)[0]  # first candidate of ambiguous list
-        if self.use_upos:
-            analysis = self._add_external_upos(analysis)
-        return analysis
