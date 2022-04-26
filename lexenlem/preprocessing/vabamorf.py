@@ -39,7 +39,7 @@ class VabamorfAnalysisConll(BaseAnalysis):
 
 @dataclass
 class AdHocInput:
-    src_input: List[int]
+    src_input: List[int]  # contains form itself + concatenated pos and features
     lemma_input: List[int]
     edit_type: int
 
