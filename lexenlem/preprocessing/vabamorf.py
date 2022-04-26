@@ -14,6 +14,7 @@ from lexenlem.models.lemma import edit
 from lexenlem.models.lemma.data import DataLoaderCombined
 from lexenlem.models.lemma.vocab import MultiVocab, Vocab
 from lexenlem.models.common.data import get_long_tensor, sort_all
+from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline
 
 tagger = VabamorfTagger(compound=True, disambiguate=False, guess=False)
 
@@ -96,15 +97,6 @@ def convert_vb_to_conll(vb_analysis: VabamorfAnalysis) -> List[VabamorfAnalysisC
         )
         for feats_candidate in candidates
     ]
-
-
-def tokenize(raw_text: str) -> List[str]:
-    text = Text(raw_text)
-    text.tag_layer("tokens")
-    tokenized = []
-    for token in text.tokens:
-        tokenized.append(token.text)
-    return tokenized
 
 
 def prepare_batch(
@@ -226,11 +218,7 @@ class VabamorfAdHocProcessor:
 
         self.eos_after = self.config["eos_after"]
 
-        self.analyzer = VabamorfAnalyzer(
-            output_compound_separator=self.output_compound_separator,
-            convert_to_conllu=self.convert_to_conllu,
-            use_upos=True,
-        )
+        self.analyzer = VbPipeline()
 
     def _init_model(self, path: str):
         checkpoint = torch.load(path, map_location=self.device)
