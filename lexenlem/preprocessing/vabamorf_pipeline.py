@@ -27,6 +27,7 @@ CASE_MAP = {
     "part": "Par",
     "term": "Ter",
     "tr": "Tra",
+    "kom": "Com",
 }
 
 PERSON_MAP = {
@@ -47,10 +48,10 @@ TENSE_MAP = {
 }
 
 MOOD_MAP = {
-    "cond",
-    "imper",
-    "indic",
-    "quot",
+    "cond": "Cnd",
+    "imper": "Imp",
+    "indic": "Ind",
+    "quot": "Qot",
 }
 
 NUM_TYPE_MAP = {
@@ -94,7 +95,7 @@ class VbTokenAnalysis:
 
 @dataclass
 class VbTokenAnalysisConll(VbTokenAnalysis):
-    conll_feature_candidates: List[str]
+    conll_feature_candidates: List[Union[Dict[str, str], None]]
 
 
 class VbPipeline:
@@ -175,7 +176,11 @@ def convert_vb_to_conll(vb_analysis: VbTokenAnalysis) -> VbTokenAnalysisConll:
             lemma_candidates=vb_analysis.lemma_candidates,
             part_of_speech=vb_analysis.part_of_speech,
             features=vb_analysis.features,
-            conll_feature_candidates=[remove_pos_from_feats(candidate) for candidate in candidates],
+            conll_feature_candidates=[
+                get_conll_shared_feats(remove_pos_from_feats(candidate))
+                for candidate in candidates
+            ],
+
         )
 
 
@@ -195,3 +200,13 @@ def to_camel_case(name: str) -> str:
     name = name.split("_")
     name = [el.capitalize() for el in name]
     return "".join(name)
+
+
+def get_conll_shared_feats(hypothesis: str) -> Dict[str, str]:
+    feats = str_tags_to_dict(hypothesis)
+    if feats:
+        shared_feats = dict()
+        for key, value in feats.items():
+            if key in SHARED_FEATS:
+                shared_feats[key] = SHARED_FEATS[key][value]
+        return shared_feats

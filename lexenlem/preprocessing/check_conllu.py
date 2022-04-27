@@ -41,23 +41,29 @@ def check_converted_tags():
 
     pipeline = VbPipeline()
 
-    vb_set = set()
-    conll_set = set()
+    new_parsed = []
 
     for sentence in tqdm(parsed):
         text = sentence.metadata["text"]
         processed = pipeline(text)[0]
         processed = [convert_vb_to_conll(el) for el in processed]
         if len(processed) == len(sentence):
-            for x, y in zip(processed, sentence):
-                vb = [str_tags_to_dict(feat) for feat in x.conll_feature_candidates]
-                for candidate in vb:
-                    if candidate:
-                        for key, value in candidate.items():
-                            vb_set.add((key, value))
-                conll = y["feats"]
-                if conll:
-                    for key, value in conll.items():
-                        conll_set.add((key, value))
+            for vb_token, c_token in zip(processed, sentence):
+                vb_token_tag_candidates = vb_token.conll_feature_candidates
+                c_token_tags = c_token["feats"]
+                if len(vb_token_tag_candidates) > 1 and len(set(vb_token.lemma_candidates)) > 1:
+                    for candidate in vb_token_tag_candidates:
+                        # print(vb_token_tag_candidates)
+                        print(vb_token.token, len(vb_token_tag_candidates))
+                        print(vb_token.lemma_candidates)
+                        print(candidate)
+                        print(c_token_tags)
+                        print("shared:")
+                        print({x: candidate[x] for x in candidate if x in c_token_tags and candidate[x] == c_token_tags[x]})
+                        # print(dict(candidate.items() & c_token_tags.items()))
+                        print(vb_token.features)
+                        print()
+                else:
+                    pass
 
-    return vb_set, conll_set
+
