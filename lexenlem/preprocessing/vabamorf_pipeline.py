@@ -7,6 +7,7 @@ from estnltk.taggers import VabamorfTagger
 
 @dataclass
 class VbTokenAnalysis:
+    index: int  # 1-based numbering to avoid confusion with conll
     token: str
     disambiguated_lemma: str
     lemma_candidates: List[str]
@@ -51,11 +52,12 @@ class VbPipeline:
         features_list = disambiguated_analysis["morph_analysis"].form
         pos_list = disambiguated_analysis["morph_analysis"].partofspeech
 
-        for token, disambiguated_lemma, lemma_candidates, features, part_of_speech in zip(
-            tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list
+        for index, (token, disambiguated_lemma, lemma_candidates, features, part_of_speech) in enumerate(
+                zip(tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list)
         ):
             result.append(
                 VbTokenAnalysis(
+                    index=index + 1,  # 1-based
                     token=token,
                     disambiguated_lemma=disambiguated_lemma[0],
                     lemma_candidates=lemma_candidates,
