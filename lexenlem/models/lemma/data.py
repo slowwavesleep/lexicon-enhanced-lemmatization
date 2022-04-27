@@ -39,7 +39,7 @@ def load_doc(doc: Document) -> Tuple[conll.CoNLLFile, List[List[str]]]:
 
 
 def load_doc_vb(doc: Document) -> Tuple[conll.CoNLLFile, List[List[str]]]:
-    data = doc.conll_file.get(["word", "lemma"])
+    data = doc.conll_file.get(["word", "xpos", "lemma", "feats"])
     return doc.conll_file, data
 
 
