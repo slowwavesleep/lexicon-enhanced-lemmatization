@@ -109,12 +109,14 @@ class VbPipeline:
             output_compound_separator: bool = True,
             guess_unknown_words: bool = True,
             output_phonetic_info: bool = False,
+            restore_verb_ending: bool = True,
     ) -> None:
         self.use_context = use_context
         self.use_proper_name_analysis = use_proper_name_analysis
         self.output_compound_separator = output_compound_separator
         self.guess_unknown_words = guess_unknown_words
         self.output_phonetic_info = output_phonetic_info
+        self.restore_verb_ending = restore_verb_ending
         # ambiguous analyzer
         self._amb_morph_tagger = VabamorfTagger(
             compound=self.output_compound_separator,
@@ -184,11 +186,24 @@ class VbPipeline:
         lemma_candidate_list = ambiguous_analysis["morph_analysis"].root
         features_list = disambiguated_analysis["morph_analysis"].form
         pos_list = disambiguated_analysis["morph_analysis"].partofspeech
+        ambiguous_pos_list = ambiguous_analysis["morph_analysis"].partofspeech
 
-        for index, (token, disambiguated_lemma, lemma_candidates, features, part_of_speech) in enumerate(
-                zip(tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list)
+        for index, (
+                token, disambiguated_lemma, lemma_candidates, features, part_of_speech, part_of_speech_candidates
+        ) in enumerate(
+                zip(tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list, ambiguous_pos_list)
         ):
-            # ensure that the order is always the same
+            disambiguated_lemma: str = disambiguated_lemma[0]
+
+            # add `ma` back to verbs
+            if self.restore_verb_ending:
+                lemma_candidates = [
+                    f"{lemma_candidate}ma" if pos == "V" else lemma_candidate
+                    for lemma_candidate, pos in zip(lemma_candidates, part_of_speech_candidates)
+                ]
+                if part_of_speech == "V":
+                    disambiguated_lemma = f"{disambiguated_lemma}ma"
+
             lemma_candidates: List[str] = sorted(lemma_candidates)
             result.append(
                 VbTokenAnalysis(

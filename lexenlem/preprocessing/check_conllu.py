@@ -111,3 +111,26 @@ def check_tokenization_vb():
             print(analyzed[0])
             print(sentence)
             break
+
+
+def check_vb():
+    with open("./data/et_edt-ud-test.conllu") as file:
+        data = file.read()
+
+    parsed = parse(data)
+    pipe = VbPipeline()
+    total = 0
+    correct = 0
+    for sentence in tqdm(parsed):
+        joined = [el["form"] for el in sentence]
+        lemmas = [el["lemma"] for el in sentence]
+        analyzed = pipe(joined, True)[0]
+        for vb_analysis, lemma in zip(analyzed, lemmas):
+            total += 1
+            if vb_analysis.disambiguated_lemma == lemma:
+                correct += 1
+            elif vb_analysis.part_of_speech == "V":
+                if vb_analysis.disambiguated_lemma + "ma" == lemma:
+                    correct += 1
+    # 0.97
+    print(correct/total)
