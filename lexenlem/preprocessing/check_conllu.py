@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, defaultdict, Counter
 from itertools import zip_longest
 from pprint import pprint
 
@@ -121,16 +121,30 @@ def check_vb():
     pipe = VbPipeline()
     total = 0
     correct = 0
+
     for sentence in tqdm(parsed):
-        joined = [el["form"] for el in sentence]
+        forms = [el["form"] for el in sentence]
         lemmas = [el["lemma"] for el in sentence]
-        analyzed = pipe(joined, True)[0]
-        for vb_analysis, lemma in zip(analyzed, lemmas):
+        parts_of_speech = [el["upos"] for el in sentence]
+        analyzed = pipe(forms, True)[0]
+        for vb_analysis, lemma, form, pos in zip(analyzed, lemmas, forms, parts_of_speech):
             total += 1
             if vb_analysis.disambiguated_lemma == lemma:
                 correct += 1
             elif vb_analysis.part_of_speech == "V":
-                if vb_analysis.disambiguated_lemma + "ma" == lemma:
-                    correct += 1
-    # 0.97
-    print(correct/total)
+                # print(f"Restored verb lemma: {vb_analysis.disambiguated_lemma}, UD lemma: {lemma}")
+                # if vb_analysis.disambiguated_lemma + "ma" == lemma:
+                #     correct += 1
+                #     hits.update((vb_analysis.features,))
+                # else:
+                if lemma not in set(vb_analysis.lemma_candidates):
+                    print(
+                        f"Vabamorf: {vb_analysis.disambiguated_lemma},"
+                        f" UD lemma: {lemma},"
+                        f" UD form: {form},"
+                        f" UPOS: {pos},"
+                        f" predicted feats: {vb_analysis.features},"
+                        f" lemma_candidates: {set(vb_analysis.lemma_candidates)}"
+                    )
+    # 0.97 ~0.96
+    return correct/total

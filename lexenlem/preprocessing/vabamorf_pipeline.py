@@ -87,12 +87,15 @@ class VbTokenAnalysis:
     token: str
     disambiguated_lemma: str
     lemma_candidates: Tuple[str]
+    candidate_parts_of_speech: Tuple[str]
     part_of_speech: str  # disambiguated only
     features: str  # disambiguated only
 
     @property
     def processed_lemma_candidates(self) -> str:
         return "".join(sorted(list(set(self.lemma_candidates))))
+
+    # restore verbs here?
 
 
 @dataclass(frozen=True)
@@ -194,8 +197,10 @@ class VbPipeline:
                 zip(tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list, ambiguous_pos_list)
         ):
             disambiguated_lemma: str = disambiguated_lemma[0]
+            part_of_speech: str = part_of_speech[0]
 
             # add `ma` back to verbs
+            # doesn't cover all cases
             if self.restore_verb_ending:
                 lemma_candidates = [
                     f"{lemma_candidate}ma" if pos == "V" else lemma_candidate
@@ -209,10 +214,11 @@ class VbPipeline:
                 VbTokenAnalysis(
                     index=index + 1,  # 1-based
                     token=token,
-                    disambiguated_lemma=disambiguated_lemma[0],
+                    disambiguated_lemma=disambiguated_lemma,
                     lemma_candidates=tuple(lemma_candidates),
                     features=features[0],
                     part_of_speech=part_of_speech[0],
+                    candidate_parts_of_speech=part_of_speech_candidates,
                 )
             )
         return result
