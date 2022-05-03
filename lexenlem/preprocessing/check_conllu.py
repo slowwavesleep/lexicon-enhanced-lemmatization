@@ -129,6 +129,7 @@ def check_vb():
         analyzed = pipe(forms, True)[0]
         for vb_analysis, lemma, form, pos in zip(analyzed, lemmas, forms, parts_of_speech):
             total += 1
+            lemma = lemma.replace("=", "").replace("_", "")
             if vb_analysis.disambiguated_lemma == lemma:
                 correct += 1
             elif vb_analysis.part_of_speech == "V":
@@ -144,7 +145,8 @@ def check_vb():
                         f" UD form: {form},"
                         f" UPOS: {pos},"
                         f" predicted feats: {vb_analysis.features},"
-                        f" lemma_candidates: {set(vb_analysis.lemma_candidates)}"
+                        f" lemma_candidates: {vb_analysis.lemma_candidates}"
+                        f" parts of speech: {vb_analysis.candidate_parts_of_speech}"
                     )
-    # 0.97 ~0.96
+    # ~0.96
     return correct/total

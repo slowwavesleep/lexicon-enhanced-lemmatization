@@ -109,17 +109,19 @@ class VbPipeline:
             self,
             use_context: bool = True,
             use_proper_name_analysis: bool = True,
-            output_compound_separator: bool = True,
+            output_compound_separator: bool = False,
             guess_unknown_words: bool = True,
             output_phonetic_info: bool = False,
             restore_verb_ending: bool = True,
+            ignore_derivation_symbol: bool = True,
     ) -> None:
         self.use_context = use_context
         self.use_proper_name_analysis = use_proper_name_analysis
-        self.output_compound_separator = output_compound_separator
+        self.output_compound_separator = output_compound_separator  # doesn't do anything atm
         self.guess_unknown_words = guess_unknown_words
         self.output_phonetic_info = output_phonetic_info
         self.restore_verb_ending = restore_verb_ending
+        self.ignore_derivation_symbol = ignore_derivation_symbol
         # ambiguous analyzer
         self._amb_morph_tagger = VabamorfTagger(
             compound=self.output_compound_separator,
@@ -152,6 +154,7 @@ class VbPipeline:
         self._compound_token_tagger = PretokenizedTextCompoundTokensTagger()
 
     def __call__(self, data: Union[str, List[str]], pretokenized: bool = False) -> List[List[VbTokenAnalysis]]:
+        # TODO Check that it works correctly
         if isinstance(data, str):
             return [self.analyze(data)]
         elif isinstance(data, list):
@@ -185,8 +188,12 @@ class VbPipeline:
 
         result = []
         tokens = disambiguated_analysis["morph_analysis"].text
-        disambiguated_lemmas = disambiguated_analysis["morph_analysis"].root
-        lemma_candidate_list = ambiguous_analysis["morph_analysis"].root
+        if self.output_compound_separator:
+            disambiguated_lemmas = disambiguated_analysis["morph_analysis"].root
+            lemma_candidate_list = ambiguous_analysis["morph_analysis"].root
+        else:
+            disambiguated_lemmas = disambiguated_analysis["morph_analysis"].lemma
+            lemma_candidate_list = ambiguous_analysis["morph_analysis"].lemma
         features_list = disambiguated_analysis["morph_analysis"].form
         pos_list = disambiguated_analysis["morph_analysis"].partofspeech
         ambiguous_pos_list = ambiguous_analysis["morph_analysis"].partofspeech
@@ -197,11 +204,14 @@ class VbPipeline:
                 zip(tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list, ambiguous_pos_list)
         ):
             disambiguated_lemma: str = disambiguated_lemma[0]
+            if self.ignore_derivation_symbol:
+                disambiguated_lemma = disambiguated_lemma.replace("=", "")
+                lemma_candidates = [lemma_candidate.replace("=", "") for lemma_candidate in lemma_candidates]
             part_of_speech: str = part_of_speech[0]
 
             # add `ma` back to verbs
-            # doesn't cover all cases
-            if self.restore_verb_ending:
+            if self.restore_verb_ending and self.output_compound_separator:
+                print("bb")
                 lemma_candidates = [
                     f"{lemma_candidate}ma" if pos == "V" else lemma_candidate
                     for lemma_candidate, pos in zip(lemma_candidates, part_of_speech_candidates)
@@ -218,7 +228,7 @@ class VbPipeline:
                     lemma_candidates=tuple(lemma_candidates),
                     features=features[0],
                     part_of_speech=part_of_speech[0],
-                    candidate_parts_of_speech=part_of_speech_candidates,
+                    candidate_parts_of_speech=tuple(part_of_speech_candidates),
                 )
             )
         return result
