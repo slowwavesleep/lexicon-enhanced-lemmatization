@@ -1,4 +1,4 @@
-from collections import namedtuple, defaultdict, Counter
+from collections import namedtuple
 from itertools import zip_longest
 from pprint import pprint
 
@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 from estnltk import Text
 from estnltk.taggers import VabamorfTagger, WhiteSpaceTokensTagger, PretokenizedTextCompoundTokensTagger
 
-from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline, convert_vb_to_conll, str_tags_to_dict
+from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline
 
 
 def check_len():
@@ -35,41 +35,6 @@ def check_len():
                 )
             )
     return mismatch
-
-
-def check_converted_tags():
-    with open("./data/et_edt-ud-test.conllu") as file:
-        data = file.read()
-
-    parsed = parse(data)
-
-    pipeline = VbPipeline()
-
-    new_parsed = []
-
-    for sentence in tqdm(parsed):
-        text = sentence.metadata["text"]
-        processed = pipeline(text)[0]
-        processed = [convert_vb_to_conll(el) for el in processed]
-        if len(processed) == len(sentence):
-            for vb_token, c_token in zip(processed, sentence):
-                vb_token_tag_candidates = vb_token.conll_feature_candidates
-
-                c_token_tags = c_token["feats"]
-                if len(vb_token_tag_candidates) > 1 and len(set(vb_token.lemma_candidates)) > 1:
-                    print(f"Tag candidates: {vb_token_tag_candidates}")
-                    for candidate in vb_token_tag_candidates:
-                        # print(vb_token_tag_candidates)
-                        print(f"Token: {vb_token.token}, True lemma: {c_token['lemma']}")
-                        print(f"Disambiguated: {vb_token.disambiguated_lemma}")
-                        print(f"Lemma candidates: {vb_token.lemma_candidates}")
-                        print(f"Current candidate: {candidate}, candidated feats: {vb_token.features}")
-                        print(f"True tags: {c_token_tags}")
-                        print("shared tags:")
-                        print({x: candidate[x] for x in candidate if x in c_token_tags and candidate[x] == c_token_tags[x]})
-                        # print(dict(candidate.items() & c_token_tags.items()))
-                        print()
-                        print()
 
 
 def check_tokenization():

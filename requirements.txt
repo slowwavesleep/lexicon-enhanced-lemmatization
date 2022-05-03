@@ -2,3 +2,4 @@ estnltk==1.7.0rc0
 numpy==1.21.2
 torch==1.6.0
 tqdm==4.64.0
+conllu==4.4.1

@@ -1,8 +1,11 @@
 import random
-from typing import List, Union, Tuple
+from dataclasses import dataclass
+from typing import List, Union, Tuple, Optional
 
 import torch
 from tqdm.auto import tqdm
+from conllu import parse
+from conllu.models import TokenList
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.data import get_long_tensor, sort_all
@@ -11,7 +14,7 @@ from lexenlem.models.lemma.vocab import Vocab, MultiVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
-from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline
+from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline, VbTokenAnalysis
 
 
 def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str]:
@@ -38,17 +41,6 @@ def load_doc(doc: Document) -> Tuple[conll.CoNLLFile, List[List[str]]]:
     return doc.conll_file, data
 
 
-def load_doc_vb(doc: Document) -> Tuple[conll.CoNLLFile, List[List[str]]]:
-    data = doc.conll_file.get(["word", "xpos", "lemma", "feats"])
-    return doc.conll_file, data
-
-
-def load_file_vb(filename: str) -> Tuple[conll.CoNLLFile, List[List[str]]]:
-    conll_file = conll.CoNLLFile(filename)
-    data = conll_file.get(["word", "lemma"])
-    return conll_file, data
-
-
 class DataLoaderCombined:
     def __init__(
             self,
@@ -62,7 +54,7 @@ class DataLoaderCombined:
             skip: List[bool] = None,
     ):
         self.batch_size = batch_size
-        self.args = args
+        self.config = args
         self.eval = evaluation
         self.shuffled = not self.eval
 
@@ -131,10 +123,9 @@ class DataLoaderCombined:
         pos_data = ['POS=' + d[1] for d in data]
         feats_data = make_feats_data(data)
         combined_data = char_data + pos_data + feats_data
-        combined_vocab = Vocab(combined_data, self.args['lang'])
+        combined_vocab = Vocab(combined_data, self.config['lang'])
         return combined_vocab
 
-    # def preprocess(self, data, combined_vocab, args) -> List[List[List[int], int]]:
     def preprocess(self, data: List[List[str]], combined_vocab, args):
         processed = []
         eos_after = args.get('eos_after', False)
@@ -219,100 +210,130 @@ class DataLoaderCombined:
             yield self.__getitem__(i)
 
 
-class DataLoaderVb(DataLoaderCombined):
+@dataclass(frozen=True)
+class Config:
+    morph: bool = True
+    pos: bool = True
+    sample_train: float = 1.0
+    lang: str = "et"
+    eos_after: bool = False
+    split_feats: bool = False
+
+
+class DataLoaderVb:
 
     def __init__(
             self,
-            input_src: Union[str, Document],
+            input_src: str,
             batch_size: int,
-            args: dict,
-            vocab: MultiVocab = None,
+            config: Optional[Config] = None,
+            vocab: Optional[MultiVocab] = None,
             evaluation: bool = False,
-            conll_only: bool = False,
-            skip: List[bool] = None,
             use_vb_lemmas: bool = True,
     ):
         self.batch_size = batch_size
-        self.args = args
+        self.config = config
         self.eval = evaluation
         self.shuffled = not self.eval
         self.use_vb_lemmas = use_vb_lemmas
 
-        self.lemmatizer = VbPipeline()
-        self.morph = args.get("morph", True)
-        self.pos = args.get("pos", True)
+        self.analyzer = VbPipeline(
+            use_context=True,
+            use_proper_name_analysis=True,
+            output_compound_separator=False,
+            guess_unknown_words=True,
+            output_phonetic_info=False,
+            ignore_derivation_symbol=True,
+        )
+        self.morph = config.morph
+        self.pos = config.pos
         print("Using Vabamorf morphological features:", self.morph)
         print("Using Vabamorf determined parts of speech:", self.pos)
 
         # check if input source is a file or a Document object
         if isinstance(input_src, str):
-            filename = input_src
-            assert filename.endswith("conllu"), "Loaded file must be conllu file."
-            self.conll, data = load_file_vb(filename)
-        elif isinstance(input_src, Document):
-            doc = input_src
-            self.conll, data = load_doc_vb(doc)
+            assert input_src.endswith("conllu"), "Loaded file must be conllu file."
+            with open(input_src) as file:
+                data: str = file.read()
+            data: List[TokenList] = parse(data)
         else:
             raise TypeError("Incorrect input format.")
 
-        if conll_only:  # only load conll file
-            return
-
-        if skip is not None:
-            assert len(data) == len(skip)
-            data = [x for x, y in zip(data, skip) if not y]
+        data: List[VbTokenAnalysis] = self._analyze(data)
 
         # handle vocab
         if vocab is not None:
             self.vocab = vocab
         else:
             self.vocab = dict()
-            combined_vocab = self.init_vocab(data)
+            combined_vocab = self._init_vocab(data)
             self.vocab = MultiVocab({"combined": combined_vocab})
 
         # filter and sample data
-        if args.get("sample_train", 1.0) < 1.0 and not self.eval:
-            keep = int(args["sample_train"] * len(data))
-            data = random.sample(data, keep)
-            print("Subsample training set with rate {:g}".format(args["sample_train"]))
+        # if config.sample_train < 1.0 and not self.eval:
+        #     keep = int(config.sample_train * len(data))
+        #     data = random.sample(data, keep)
+        #     print("Subsample training set with rate {:g}".format(config.sample_train))
 
-        data = self.preprocess(data, self.vocab["combined"], args)
+        # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
+        data: List[List[int]] = self._preprocess(data, self.vocab["combined"], config)
         # shuffle for training
-        if self.shuffled:
-            indices = list(range(len(data)))
-            random.shuffle(indices)
-            data = [data[i] for i in indices]
-        self.num_examples = len(data)
+        # if self.shuffled:
+        #     indices = list(range(len(data)))
+        #     random.shuffle(indices)
+        #     data = [data[i] for i in indices]
+        # self.num_examples = len(data)
 
         # chunk into batches
         data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
-    def init_vocab(self, data: List[List[str]]) -> Vocab:
+    def _analyze(self, data: List[TokenList]) -> List[VbTokenAnalysis]:
+        result: List[VbTokenAnalysis] = []  # just a flat output
+        for sentence in tqdm(data):
+            tokens: List[str] = [token["form"] for token in sentence]
+            true_lemmas: List[str] = [token["lemma"] for token in sentence]
+            analyzed: List[VbTokenAnalysis] = self.analyzer.analyze(tokens)
+            for token_analysis, true_lemma in zip(analyzed, true_lemmas):
+                token_analysis.true_lemma = true_lemma
+                result.append(token_analysis)
+        return result
+
+    def _init_vocab(self, data: List[VbTokenAnalysis]) -> Vocab:
         assert self.eval is False, "Vocab file must exist for evaluation"
-        char_data = list("".join(d[0] + d[2] for d in data))
-        pos_data = ['POS=' + d[1] for d in data]
-        feats_data = make_feats_data(data)
+        char_data: List[str] = []
+        pos_data: List[str] = []
+        feats_data: List[str] = []
+        for token in data:
+            char_data.append(f"{token.token}{token.true_lemma}")
+            pos_data.append(f"POS={token.part_of_speech}")
+            if self.config.split_feats:
+                feats_data.extend(token.features.split(" "))
+            else:
+                feats_data.append(token.features)
+        char_data = list("".join(char_data))
+        # char_data = list("".join(d[0] + d[2] for d in data))
+        # pos_data = ['POS=' + d[1] for d in data]
+        # feats_data = make_feats_data(data)
         combined_data = char_data + pos_data + feats_data
-        combined_vocab = Vocab(combined_data, self.args['lang'])
+        combined_vocab = Vocab(combined_data, self.config.lang)
         return combined_vocab
 
-    def preprocess(self, data: List[List[str]], combined_vocab, args):
+    def _preprocess(self, data: List[VbTokenAnalysis], combined_vocab, config) -> List[List[int]]:
         processed = []
-        eos_after = args.get("eos_after", False)
-        for element in tqdm(data, desc="Preprocessing data..."):
+        eos_after = config.eos_after
+        for element in data:
             # (token, lemma)
-            src = list(element[0])
+            src: List[str] = list(element.token)
             if eos_after:
                 src = [constant.SOS] + src
             else:
                 src = [constant.SOS] + src + [constant.EOS]
-            pos = ['POS=' + element[1]]
-            feats = []
-            if '|' in element[3]:
-                feats.extend(element[3].split('|'))
+            pos = ['POS=' + element.part_of_speech]
+            if self.config.split_feats:
+                raise NotImplementedError
             else:
-                feats.append(element[3])
+                feats = [element.features]
             inp: List[str] = src
             if self.pos:
                 inp += pos
@@ -325,16 +346,15 @@ class DataLoaderVb(DataLoaderCombined):
             if not self.use_vb_lemmas:
                 lem = [constant.SOS, constant.EOS]
             else:
-                lem: List[str] = self.lemmatizer.lemmatize(element[0])  # original code
-                lem: List[str] = list("".join(list(dict.fromkeys(lem))))  # list of chars
-                lem = [constant.SOS] + lem + [constant.EOS]
+                lem: str = element.processed_lemma_candidates
+                lem: List[str] = list(lem)  # list of chars
+                lem: List[str] = [constant.SOS] + lem + [constant.EOS]
             lem: List[int] = combined_vocab.map(lem)
             processed_sent += [lem]
-            tgt = list(element[2])
+            tgt = list(element.true_lemma)
             tgt_in = combined_vocab.map([constant.SOS] + tgt)
             tgt_out = combined_vocab.map(tgt + [constant.EOS])
             processed_sent += [tgt_in]
             processed_sent += [tgt_out]
-            # processed_sent += [edit_type]
             processed.append(processed_sent)
         return processed
