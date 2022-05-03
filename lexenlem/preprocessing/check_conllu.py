@@ -126,7 +126,7 @@ def check_vb():
         forms = [el["form"] for el in sentence]
         lemmas = [el["lemma"] for el in sentence]
         parts_of_speech = [el["upos"] for el in sentence]
-        analyzed = pipe(forms, True)[0]
+        analyzed = pipe(forms)
         for vb_analysis, lemma, form, pos in zip(analyzed, lemmas, forms, parts_of_speech):
             total += 1
             lemma = lemma.replace("=", "").replace("_", "")
@@ -150,3 +150,4 @@ def check_vb():
                     )
     # ~0.96
     return correct/total
+

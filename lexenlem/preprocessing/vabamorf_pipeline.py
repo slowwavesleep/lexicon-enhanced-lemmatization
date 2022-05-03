@@ -6,80 +6,6 @@ from estnltk.taggers import VabamorfTagger, WhiteSpaceTokensTagger, Pretokenized
 
 from lexenlem.models.common.vabamorf2conll import neural_model_tags
 
-DEGREE_MAP = {
-    "pos": "Pos",
-    "comp": "Cmp",
-    "super": "Sup",
-}
-
-CASE_MAP = {
-    "abes": "Abe",
-    "abl": "Abl",
-    "adit": "Add",
-    "ad": "Ade",
-    "all": "All",
-    "el": "Ela",
-    "es": "Ess",
-    "gen": "Gen",
-    "ill": "Ill",
-    "in": "Ine",
-    "nom": "Nom",
-    "part": "Par",
-    "term": "Ter",
-    "tr": "Tra",
-    "kom": "Com",
-}
-
-PERSON_MAP = {
-    "ps1": "1",
-    "ps2": "2",
-    "ps3": "3",
-}
-
-NUMBER_MAP = {
-    "pl": "Plur",
-    "sg": "Sing",
-}
-
-TENSE_MAP = {
-    "impf": "Past",  # converb?
-    "past": "Past",
-    "pres": "Pres",
-}
-
-MOOD_MAP = {
-    "cond": "Cnd",
-    "imper": "Imp",
-    "indic": "Ind",
-    "quot": "Qot",
-}
-
-NUM_TYPE_MAP = {
-    "card": "Card",
-    "ord": "Ord",
-}
-
-VERB_FORM_MAP = {
-    "ger": "Conv",  # ??
-    "inf": "Inf",
-    "partic": "Part",
-    "sup": "Sup",
-    # : "Fin" ??
-}
-
-SHARED_FEATS = {
-    "VerbForm": VERB_FORM_MAP,
-    "NumType": NUM_TYPE_MAP,
-    "Mood": MOOD_MAP,
-    "Case": CASE_MAP,
-    "Number": NUMBER_MAP,
-    "Person": PERSON_MAP,
-    "Degree": DEGREE_MAP,
-    "Tense": TENSE_MAP,
-}
-
-# POLARITY just one: neg
-
 
 @dataclass(frozen=True)
 class VbTokenAnalysis:
@@ -94,8 +20,6 @@ class VbTokenAnalysis:
     @property
     def processed_lemma_candidates(self) -> str:
         return "".join(sorted(list(set(self.lemma_candidates))))
-
-    # restore verbs here?
 
 
 @dataclass(frozen=True)
@@ -153,17 +77,10 @@ class VbPipeline:
         self._whitespace_tagger = WhiteSpaceTokensTagger()
         self._compound_token_tagger = PretokenizedTextCompoundTokensTagger()
 
-    def __call__(self, data: Union[str, List[str]], pretokenized: bool = False) -> List[List[VbTokenAnalysis]]:
-        # TODO Check that it works correctly
-        if isinstance(data, str):
-            return [self.analyze(data)]
-        elif isinstance(data, list):
-            if pretokenized:
-                return [self.analyze(data)]
-            else:
-                return [self.analyze(el) for el in data]
-        else:
-            raise NotImplementedError
+    def __call__(
+            self, data: Union[str, List[str]]
+    ) -> List[VbTokenAnalysis]:
+        return self.analyze(data)
 
     def analyze(self, input_text: Union[List[str], str]) -> List[VbTokenAnalysis]:
         if isinstance(input_text, str):
@@ -262,56 +179,3 @@ class VbPipeline:
         text.tag_layer(self._amb_morph_tagger.input_layers)
         self._disamb_morph_tagger.tag(text)
         return text
-
-
-def remove_pos_from_feats(feats: str) -> str:
-    if "POS=" not in feats:
-        return feats
-    feats = feats.split("|")
-    return "|".join([feat for feat in feats if "POS=" not in feat])
-
-
-def convert_vb_to_conll(vb_analysis: VbTokenAnalysis) -> VbTokenAnalysisConll:
-    # conversion from vb to conll may be ambiguous
-    candidates: List[str] = neural_model_tags(vb_analysis.token, vb_analysis.part_of_speech, vb_analysis.features)
-    return VbTokenAnalysisConll(
-            index=vb_analysis.index,
-            token=vb_analysis.token,
-            disambiguated_lemma=vb_analysis.disambiguated_lemma,
-            lemma_candidates=vb_analysis.lemma_candidates,
-            part_of_speech=vb_analysis.part_of_speech,
-            features=vb_analysis.features,
-            conll_feature_candidates=[
-                get_conll_shared_feats(remove_pos_from_feats(candidate))
-                for candidate in candidates
-            ],
-
-        )
-
-
-def str_tags_to_dict(str_tags: str) -> Union[Dict[str, str], None]:
-    if str_tags:
-        individual_features: List[str] = str_tags.split("|")
-        features_dict = dict()
-        for feat in individual_features:
-            key, value = feat.split("=")
-            features_dict[to_camel_case(key)] = value
-        return features_dict
-    else:
-        return None
-
-
-def to_camel_case(name: str) -> str:
-    name = name.split("_")
-    name = [el.capitalize() for el in name]
-    return "".join(name)
-
-
-def get_conll_shared_feats(hypothesis: str) -> Dict[str, str]:
-    feats = str_tags_to_dict(hypothesis)
-    if feats:
-        shared_feats = dict()
-        for key, value in feats.items():
-            if key in SHARED_FEATS:
-                shared_feats[key] = SHARED_FEATS[key][value]
-        return shared_feats
