@@ -21,6 +21,13 @@ from lexenlem.models.lemma import scorer, edit
 from lexenlem.models.common import utils
 from lexenlem.models.common.lexicon import ExtendedLexicon
 
+# TODO:
+# 0. Update evaluate
+# 1. Add keyboard interrupt
+# 2. Add TQDM
+# 3. Add logging
+# 4. Add config class
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -32,10 +39,13 @@ def parse_args():
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
-    parser.add_argument('--lang', type=str, help='Language')
+    parser.add_argument('--lang', default="et", type=str, help='Language')
 
-    parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false',
-                        help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
+    parser.add_argument('--no_dict',
+                        dest='ensemble_dict',
+                        action='store_false',
+                        help='Do not ensemble dictionary with seq2seq. By default use ensemble.',
+                        )
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
 
     parser.add_argument('--hidden_dim', type=int, default=200)
@@ -47,21 +57,48 @@ def parse_args():
     parser.add_argument('--beam_size', type=int, default=1)
 
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
-    parser.add_argument('--no_edit', dest='edit', action='store_false',
-                        help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
-    parser.add_argument('--no_morph', dest='morph', action='store_false',
-                        help='Do not use morphological tags as inputs. By default use pos and morphological tags.')
-    parser.add_argument('--no_pos', dest='pos', action='store_false',
-                        help='Do not use pos tags as inputs. By default use pos and morphological tags.')
+    parser.add_argument(
+        '--no_edit',
+        dest='edit',
+        action='store_false',
+        help='Do not use edit classifier in lemmatization. By default use an edit classifier.',
+    )
+    parser.add_argument(
+        '--no_morph',
+        dest='morph',
+        action='store_false',
+        help='Do not use morphological tags as inputs. By default use pos and morphological tags.',
+    )
+    parser.add_argument(
+        '--no_pos',
+        dest='pos',
+        action='store_false',
+        help='Do not use pos tags as inputs. By default use pos and morphological tags.',
+    )
     parser.add_argument('--lemmatizer', type=str, default=None, help='Name of the outer lemmatizer function')
-    parser.add_argument('--no_pos_lexicon', dest='use_pos', action='store_false',
-                        help='Do not use word-pos dictionary in the lexicon')
-    parser.add_argument('--no_word_lexicon', dest='use_word', action='store_false',
-                        help='Do not use word dictionary in the lexicon')
-    parser.add_argument('--lexicon_dropout', type=float, default=0.8,
-                        help='Probability to drop the word from the lexicon')
-    parser.add_argument('--eos_after', action='store_true',
-                        help='Put <EOS> symbol after all the inputs. Otherwise put it after the end of token')
+    parser.add_argument(
+        '--no_pos_lexicon',
+        dest='use_pos',
+        action='store_false',
+        help='Do not use word-pos dictionary in the lexicon',
+    )
+    parser.add_argument(
+        '--no_word_lexicon',
+        dest='use_word',
+        action='store_false',
+        help='Do not use word dictionary in the lexicon'
+    )
+    parser.add_argument(
+        '--lexicon_dropout',
+        type=float,
+        default=0.8,
+        help='Probability to drop the word from the lexicon',
+    )
+    parser.add_argument(
+        '--eos_after',
+        action='store_true',
+        help='Put <EOS> symbol after all the inputs. Otherwise put it after the end of token',
+    )
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
     parser.add_argument('--alpha', type=float, default=1.0)
 
@@ -71,14 +108,22 @@ def parse_args():
     parser.add_argument('--lr_decay', type=float, default=0.9)
     parser.add_argument('--decay_epoch', type=int, default=30, help="Decay the lr starting from this epoch.")
     parser.add_argument('--num_epoch', type=int, default=60)
-    parser.add_argument('--early_stop', type=int, default=10,
-                        help="Stop training if dev score doesn't improve after the specified number of epochs.")
-    parser.add_argument('--min_epochs', type=int, default=10,
-                        help="Minimum number of epochs to train before early stopping gets applied.")
+    parser.add_argument(
+        '--early_stop',
+        type=int,
+        default=10,
+        help="Stop training if dev score doesn't improve after the specified number of epochs.",
+    )
+    parser.add_argument(
+        '--min_epochs',
+        type=int,
+        default=10,
+        help="Minimum number of epochs to train before early stopping gets applied."
+    )
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
-    parser.add_argument('--model_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
+    parser.add_argument('--model_dir', type=str, default='./saved_models/lemma', help='Root dir for saving models.')
     parser.add_argument('--log_attn', action='store_true', help='Log attention output.')
 
     parser.add_argument('--seed', type=int, default=1234)
@@ -322,9 +367,9 @@ def evaluate(args):
                                     (log_attns[k].shape[0] - attns[k].shape[0], attns[k].shape[1], attns[k].shape[2]))))
                             else:
                                 log_attns[k] = np.vstack((log_attns[k], np.zeros((
-                                                                                 attns[k].shape[0] - log_attns[k].shape[
-                                                                                     0], log_attns[k].shape[1],
-                                                                                 log_attns[k].shape[2]))))
+                                    attns[k].shape[0] - log_attns[k].shape[
+                                        0], log_attns[k].shape[1],
+                                    log_attns[k].shape[2]))))
                             log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=2)
                         elif k == 'all_hyp':
                             log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)

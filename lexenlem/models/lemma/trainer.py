@@ -13,6 +13,7 @@ from lexenlem.models.common.seq2seq_model import Seq2SeqModel, Seq2SeqModelCombi
 from lexenlem.models.common import utils, loss
 from lexenlem.models.lemma import edit
 from lexenlem.models.lemma.vocab import MultiVocab
+from lexenlem.preprocessing.vabamorf_pipeline import AdHocModelInput
 
 
 def unpack_batch(batch, use_cuda: bool):
@@ -353,9 +354,11 @@ class TrainerVb(Trainer):
             self.crit.cpu()
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
-    def update(self, batch, evaluate: bool = False):
-        inputs, _ = unpack_batch_combined(batch, self.use_cuda)
-        src, src_mask, lem, lem_mask, tgt_in, tgt_out = inputs
+    def update(self, batch: AdHocModelInput, evaluate: bool = False):
+        if self.use_cuda:
+            batch.cuda()
+        # inputs, _ = unpack_batch_combined(batch, self.use_cuda)
+        # src, src_mask, lem, lem_mask, tgt_in, tgt_out = inputs
 
         if evaluate:
             self.model.eval()
@@ -363,8 +366,10 @@ class TrainerVb(Trainer):
             self.model.train()
             self.optimizer.zero_grad()
 
-        log_probs, edit_logits = self.model(src, src_mask, tgt_in, lem, lem_mask)
-        loss = self.crit(log_probs.view(-1, self.vocab['combined'].size), tgt_out.view(-1))
+        log_probs, edit_logits = self.model(
+            src=batch.src, src_mask=batch.src_mask, tgt_in=batch.tgt_in, lem=batch.lem, lem_mask=batch.lem_mask
+        )
+        loss = self.crit(log_probs.view(-1, self.vocab['combined'].size), batch.tgt_out.view(-1))
         loss_val = loss.data.item()
         if evaluate:
             return loss_val
@@ -374,18 +379,25 @@ class TrainerVb(Trainer):
         self.optimizer.step()
         return loss_val
 
-    def predict(self, batch, beam_size: int = 1, log_attn: bool = False):
-        inputs, orig_idx = unpack_batch_combined(batch, self.use_cuda)
-        src, src_mask, lem, lem_mask, _, _ = inputs
+    def predict(self, batch: AdHocModelInput, beam_size: int = 1, log_attn: bool = False):
+        if self.use_cuda:
+            batch.cuda()
 
         self.model.eval()
-        batch_size = src.size(0)
+        batch_size = batch.src.size(0)
         # not all predicts match this
-        preds, _, log_attns = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
+        preds, _, log_attns = self.model.predict(
+            src=batch.src,
+            src_mask=batch.src_mask,
+            lem=batch.lem,
+            lem_mask=batch.lem_mask,
+            beam_size=beam_size,
+            log_attn=log_attn,
+        )
         pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds]  # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs]  # join chars to be tokens
-        pred_tokens = utils.unsort(pred_tokens, orig_idx)
+        pred_tokens = utils.unsort(pred_tokens, batch.orig_idx)
         return pred_tokens, log_attns
 
     def save(self, filename: str):

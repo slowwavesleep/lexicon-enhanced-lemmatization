@@ -414,7 +414,7 @@ class DataLoaderVb:
             raise IndexError
         batch: List[AdHocInput] = self.data[key]
         batch_size: int = len(batch)
-        assert len(batch) == self.batch_size
+        # assert len(batch) == self.batch_size
         tmp_batch: List[Tuple[List[int], ...]] = []
         for element in batch:
             if element.target_in is not None and element.target_out is not None:
