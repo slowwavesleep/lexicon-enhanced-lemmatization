@@ -267,6 +267,14 @@ class DataLoaderVb:
         else:
             raise TypeError("Incorrect input format.")
 
+        # filter and sample data
+        if self.config.sample_train < 1.0 and not self.eval:
+            keys = self._parsed_data.keys()
+            keep = int(self.config.sample_train * len(keys))
+            keys = random.sample(keys, keep)
+            self._parsed_data = {key: value for key, value in self._parsed_data.items() if key in keys}
+            print("Subsample training set with rate {:g}".format(self.config.sample_train))
+
         self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._analyze(list(self._parsed_data.values()))
         # handle vocab
         if vocab is not None:
@@ -283,12 +291,6 @@ class DataLoaderVb:
             indices = list(range(len(data)))
             random.shuffle(indices)
             data = [data[i] for i in indices]
-
-        # filter and sample data
-        if self.config.sample_train < 1.0 and not self.eval:
-            keep = int(self.config.sample_train * len(data))
-            data = random.sample(data, keep)
-            print("Subsample training set with rate {:g}".format(self.config.sample_train))
 
         self.num_examples = len(data)
 
