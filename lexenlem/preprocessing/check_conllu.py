@@ -116,3 +116,12 @@ def check_vb():
     # ~0.96
     return correct/total
 
+
+def check_c():
+    with open("./data/et_edt-ud-test.conllu") as file:
+        data = file.read()
+
+    parsed = parse(data)
+
+    return parsed
+

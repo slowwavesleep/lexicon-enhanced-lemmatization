@@ -381,7 +381,7 @@ class TrainerVb(Trainer):
         self.model.eval()
         batch_size = src.size(0)
         # not all predicts match this
-        preds, edit_logits, log_attns = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
+        preds, _, log_attns = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
         pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds]  # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs]  # join chars to be tokens
@@ -405,3 +405,13 @@ class TrainerVb(Trainer):
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = Seq2SeqModelCombined(self.args, self.vocab, use_cuda=use_cuda)
         self.model.load_state_dict(checkpoint['model'])
+
+    def postprocess(self, words, preds):
+        assert len(words) == len(preds), "Lemma predictions must have same length as words."
+        final = []
+        for lem, w in zip(preds, words):
+            if len(lem) == 0 or constant.UNK in lem:
+                final += [w]  # invalid prediction, fall back to word
+            else:
+                final += [lem]
+        return final

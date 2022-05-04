@@ -1,6 +1,10 @@
 import random
+from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import List, Union, Tuple, Optional
+import dataclasses
+from itertools import chain
+from typing import List, Union, Tuple, Optional, Dict
 
 import torch
 from tqdm.auto import tqdm
@@ -257,49 +261,87 @@ class DataLoaderVb:
             assert input_src.endswith("conllu"), "Loaded file must be conllu file."
             with open(input_src) as file:
                 raw_data: str = file.read()
-            raw_data: List[TokenList] = parse(raw_data)
+            self._parsed_data: Dict[str, TokenList] = {
+                token_list.metadata["sent_id"]: token_list for token_list in parse(raw_data)
+            }
         else:
             raise TypeError("Incorrect input format.")
 
-        analyzed_data: List[VbTokenAnalysis] = self._analyze(raw_data)
-
+        self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._analyze(list(self._parsed_data.values()))
         # handle vocab
         if vocab is not None:
             self.vocab = vocab
         else:
             self.vocab = dict()
-            combined_vocab = self._init_vocab(analyzed_data)
+            combined_vocab = self._init_vocab(self._flat_analysis)
             self.vocab = MultiVocab({"combined": combined_vocab})
 
-        # filter and sample data
-        if self.config.sample_train < 1.0 and not self.eval:
-            keep = int(self.config.sample_train * len(analyzed_data))
-            analyzed_data = random.sample(analyzed_data, keep)
-            print("Subsample training set with rate {:g}".format(self.config.sample_train))
-
         # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
-        data: List[AdHocInput] = self._preprocess(analyzed_data, self.vocab["combined"])
+        data: List[AdHocInput] = self._preprocess(self._flat_analysis, self.vocab["combined"])
         # shuffle for training
         if self.shuffled:
             indices = list(range(len(data)))
             random.shuffle(indices)
             data = [data[i] for i in indices]
+
+        # filter and sample data
+        if self.config.sample_train < 1.0 and not self.eval:
+            keep = int(self.config.sample_train * len(data))
+            data = random.sample(data, keep)
+            print("Subsample training set with rate {:g}".format(self.config.sample_train))
+
         self.num_examples = len(data)
 
         # chunk into batches
         data: List[List[AdHocInput]] = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
-    def _analyze(self, data: List[TokenList]) -> List[VbTokenAnalysis]:
-        result: List[VbTokenAnalysis] = []  # just a flat output
+    def _analyze(self, data: List[TokenList]) -> Dict[str, List[VbTokenAnalysis]]:
+        result: Dict[str, List[VbTokenAnalysis]] = defaultdict(lambda: [])
         for sentence in tqdm(data, desc="Vabamorf analyzing..."):
             tokens: List[str] = [token["form"] for token in sentence]
             true_lemmas: List[str] = [token["lemma"] for token in sentence]
+            sent_id: str = sentence.metadata.get("sent_id")
             analyzed: List[VbTokenAnalysis] = self.analyzer.analyze(tokens)
             for token_analysis, true_lemma in zip(analyzed, true_lemmas):
                 token_analysis.true_lemma = true_lemma
-                result.append(token_analysis)
+                token_analysis.sent_id = sent_id
+                result[sent_id].append(token_analysis)
+        if len(result) != len(data):
+            raise RuntimeError("Number of sentences doesn't match")
         return result
+
+    @property
+    def _flat_analysis(self) -> List[VbTokenAnalysis]:
+        return list(chain(*self._analyzed_data.values()))
+
+    @property
+    def original_tokens(self) -> List[str]:
+        if self.eval:
+            return [token.token for token in self._flat_analysis]
+        else:
+            raise RuntimeError("Not available in eval mode")
+
+    def _process_predictions(self, predictions: List[str]):
+        result: List[VbTokenAnalysis] = []
+        for token_analysis, predicted_lemma in zip(self._flat_analysis, predictions):
+            result.append(dataclasses.replace(token_analysis, predicted_lemma=predicted_lemma))
+        return result
+
+    def _pred_to_conll(self, predictions: List[str]) -> Dict[str, TokenList]:
+        processed = self._process_predictions(predictions)
+        conll_data: Dict[str, TokenList] = deepcopy(self._parsed_data)
+        for token in processed:
+            sent_id = token.sent_id
+            token_index = token.index - 1
+            conll_data[sent_id][token_index]["lemma"] = token.predicted_lemma
+        return conll_data
+
+    def write_to_conll(self, predictions: List[str], path: str):
+        conll_data = self._pred_to_conll(predictions)
+        with open(path, "w") as file:
+            for sent in conll_data.values():
+                file.write(sent.serialize())
 
     def _init_vocab(self, data: List[VbTokenAnalysis]) -> Vocab:
         assert self.eval is False, "Vocab file must exist for evaluation"

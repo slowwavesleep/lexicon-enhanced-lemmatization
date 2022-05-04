@@ -16,7 +16,7 @@ import torch
 import importlib
 
 from lexenlem.models.lemma.data import DataLoaderCombined, DataLoaderVbConfig, DataLoaderVb
-from lexenlem.models.lemma.trainer import TrainerCombined
+from lexenlem.models.lemma.trainer import TrainerCombined, TrainerVb
 from lexenlem.models.lemma import scorer, edit
 from lexenlem.models.common import utils
 from lexenlem.models.common.lexicon import ExtendedLexicon
@@ -24,12 +24,12 @@ from lexenlem.models.common.lexicon import ExtendedLexicon
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='data/lemma', help='Directory for all lemma data.')
+    parser.add_argument('--data_dir', type=str, default='./data/lemma', help='Directory for all lemma data.')
     parser.add_argument('--unimorph_dir', type=str, default='', help='Directory of unimorph file')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
+    parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -124,8 +124,8 @@ def train(args):
     )
     vocab = train_batch.vocab
     args['vocab_size'] = vocab['combined'].size
-    dev_batch = DataLoaderCombined(
-        input_src=args['eval_file'], batch_size=['batch_size'], config=config, vocab=vocab, evaluation=True
+    dev_batch = DataLoaderVb(
+        input_src=args['eval_file'], batch_size=args['batch_size'], config=config, vocab=vocab, evaluation=True
     )
     utils.ensure_dir(args['model_dir'])
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
@@ -143,7 +143,7 @@ def train(args):
 
     # start training
     # train a dictionary-based lemmatizer
-    trainer = TrainerCombined(args=args, vocab=vocab, use_cuda=args['cuda'])
+    trainer = TrainerVb(args=args, vocab=vocab, use_cuda=args['cuda'])
 
     # if args['lemmatizer'] == 'lexicon':
     #     trainer.lexicon = train_batch.lemmatizer
@@ -175,7 +175,7 @@ def train(args):
         for i, batch in enumerate(train_batch):
             start_time = time.time()
             global_step += 1
-            loss = trainer.update(batch, eval=False)  # update step
+            loss = trainer.update(batch, evaluate=False)  # update step
             train_loss += loss
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
@@ -194,15 +194,12 @@ def train(args):
 
         # eval on dev
         print("Evaluating on dev set...")
-        dev_preds = []
-        dev_edits = []
+        dev_preds = []  # predictions for every token
         for i, batch in enumerate(dev_batch):
             start_time = time.time()
             dev_step += 1
-            preds, edits, _ = trainer.predict(batch, args['beam_size'])
+            preds, _ = trainer.predict(batch, 1)
             dev_preds += preds
-            if edits is not None:
-                dev_edits += edits
             if dev_step % args['log_step'] == 0:
                 duration = time.time() - start_time
                 print(
@@ -215,13 +212,14 @@ def train(args):
                         duration
                     )
                 )
-        dev_preds = trainer.postprocess(dev_batch.conll.get(['word']), dev_preds, edits=dev_edits)
+        dev_preds = trainer.postprocess(dev_batch.original_tokens, dev_preds)  # list of original forms
 
         # try ensembling with dict if necessary
-        if args.get('ensemble_dict', False):
-            print("[Ensembling dict with seq2seq model...]")
-            dev_preds = trainer.ensemble(dev_batch.conll.get(['word', 'upos']), dev_preds)
-        dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
+        # if args.get('ensemble_dict', False):
+        #     print("[Ensembling dict with seq2seq model...]")
+        #     dev_preds = trainer.ensemble(dev_batch.conll.get(['word', 'upos']), dev_preds)
+
+        dev_batch.write_to_conll(dev_preds, system_pred_file)
         _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
         train_loss = train_loss / train_batch.num_examples * args['batch_size']  # avg loss per batch

@@ -21,7 +21,11 @@ class VbTokenAnalysis:
     candidate_parts_of_speech: Tuple[str]
     part_of_speech: str  # disambiguated only
     features: str  # disambiguated only
+    # only available when reading conll file
     true_lemma: Optional[str] = None
+    sent_id: Optional[str] = None
+    # store model's prediction
+    predicted_lemma: Optional[str] = None
 
     @property
     def processed_lemma_candidates(self) -> str:
