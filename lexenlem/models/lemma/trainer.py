@@ -327,3 +327,81 @@ class TrainerCombined(Trainer):
             self.model.load_state_dict(checkpoint['model'])
         else:
             self.model = None
+
+
+class TrainerVb(Trainer):
+    def __init__(self, args: dict = None, vocab=None, emb_matrix=None, model_file: str = None, use_cuda: bool = False):
+        self.use_cuda = use_cuda
+        if model_file is not None:
+            # load everything from file
+            self.load(model_file, use_cuda)
+        else:
+            # build model from scratch
+            self.args = args
+            self.model = Seq2SeqModelCombined(args, vocab, emb_matrix=emb_matrix, use_cuda=use_cuda)
+            self.vocab = vocab
+            # dict-based components
+            self.word_dict = dict()
+            self.composite_dict = dict()
+        self.crit = loss.SequenceLoss(self.vocab['combined'].size)
+        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
+        if use_cuda:
+            self.model.cuda()
+            self.crit.cuda()
+        else:
+            self.model.cpu()
+            self.crit.cpu()
+        self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
+
+    def update(self, batch, evaluate: bool = False):
+        inputs, _ = unpack_batch_combined(batch, self.use_cuda)
+        src, src_mask, lem, lem_mask, tgt_in, tgt_out = inputs
+
+        if evaluate:
+            self.model.eval()
+        else:
+            self.model.train()
+            self.optimizer.zero_grad()
+
+        log_probs, edit_logits = self.model(src, src_mask, tgt_in, lem, lem_mask)
+        loss = self.crit(log_probs.view(-1, self.vocab['combined'].size), tgt_out.view(-1))
+        loss_val = loss.data.item()
+        if evaluate:
+            return loss_val
+
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
+        self.optimizer.step()
+        return loss_val
+
+    def predict(self, batch, beam_size: int = 1, log_attn: bool = False):
+        inputs, orig_idx = unpack_batch_combined(batch, self.use_cuda)
+        src, src_mask, lem, lem_mask, _, _ = inputs
+
+        self.model.eval()
+        batch_size = src.size(0)
+        # not all predicts match this
+        preds, edit_logits, log_attns = self.model.predict(src, src_mask, lem, lem_mask, beam_size=beam_size, log_attn=log_attn)
+        pred_seqs = [self.vocab['combined'].unmap(ids) for ids in preds]  # unmap to tokens
+        pred_seqs = utils.prune_decoded_seqs(pred_seqs)
+        pred_tokens = ["".join(seq) for seq in pred_seqs]  # join chars to be tokens
+        pred_tokens = utils.unsort(pred_tokens, orig_idx)
+        return pred_tokens, log_attns
+
+    def save(self, filename: str):
+        params = {
+                'model': self.model.state_dict() if self.model is not None else None,
+                'dicts': (self.word_dict, self.composite_dict),
+                'vocab': self.vocab.state_dict(),
+                'config': self.args,
+                }
+        torch.save(params, filename)
+        print("model saved to {}".format(filename))
+
+    def load(self, filename: str, use_cuda: str = False):
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        self.args = checkpoint['config']
+        self.word_dict, self.composite_dict = checkpoint['dicts']
+        self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
+        self.model = Seq2SeqModelCombined(self.args, self.vocab, use_cuda=use_cuda)
+        self.model.load_state_dict(checkpoint['model'])
