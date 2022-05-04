@@ -14,7 +14,7 @@ from lexenlem.models.lemma.vocab import Vocab, MultiVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
-from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline, VbTokenAnalysis
+from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline, VbTokenAnalysis, AdHocInput, AdHocModelInput
 
 
 def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str]:
@@ -237,6 +237,9 @@ class DataLoaderVb:
         self.shuffled = not self.eval
         self.use_vb_lemmas = use_vb_lemmas
 
+        if not config:
+            self.config = Config()
+
         self.analyzer = VbPipeline(
             use_context=True,
             use_proper_name_analysis=True,
@@ -245,8 +248,8 @@ class DataLoaderVb:
             output_phonetic_info=False,
             ignore_derivation_symbol=True,
         )
-        self.morph = config.morph
-        self.pos = config.pos
+        self.morph = self.config.morph
+        self.pos = self.config.pos
         print("Using Vabamorf morphological features:", self.morph)
         print("Using Vabamorf determined parts of speech:", self.pos)
 
@@ -276,7 +279,7 @@ class DataLoaderVb:
         #     print("Subsample training set with rate {:g}".format(config.sample_train))
 
         # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
-        data: List[List[int]] = self._preprocess(data, self.vocab["combined"], config)
+        data: List[AdHocInput] = self._preprocess(data, self.vocab["combined"])
         # shuffle for training
         # if self.shuffled:
         #     indices = list(range(len(data)))
@@ -285,12 +288,12 @@ class DataLoaderVb:
         # self.num_examples = len(data)
 
         # chunk into batches
-        data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
+        data: List[List[AdHocInput]] = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
     def _analyze(self, data: List[TokenList]) -> List[VbTokenAnalysis]:
         result: List[VbTokenAnalysis] = []  # just a flat output
-        for sentence in tqdm(data):
+        for sentence in tqdm(data, desc="Vabamorf analyzing..."):
             tokens: List[str] = [token["form"] for token in sentence]
             true_lemmas: List[str] = [token["lemma"] for token in sentence]
             analyzed: List[VbTokenAnalysis] = self.analyzer.analyze(tokens)
@@ -319,42 +322,93 @@ class DataLoaderVb:
         combined_vocab = Vocab(combined_data, self.config.lang)
         return combined_vocab
 
-    def _preprocess(self, data: List[VbTokenAnalysis], combined_vocab, config) -> List[List[int]]:
+    def _preprocess(self, data: List[VbTokenAnalysis], combined_vocab) -> List[AdHocInput]:
         processed = []
-        eos_after = config.eos_after
+        eos_after = self.config.eos_after
         for element in data:
-            # (token, lemma)
-            src: List[str] = list(element.token)
+            surface_form: List[str] = list(element.token)
             if eos_after:
-                src = [constant.SOS] + src
+                surface_form = [constant.SOS] + surface_form
             else:
-                src = [constant.SOS] + src + [constant.EOS]
-            pos = ['POS=' + element.part_of_speech]
+                surface_form = [constant.SOS] + surface_form + [constant.EOS]
+            part_of_speech = ['POS=' + element.part_of_speech]
             if self.config.split_feats:
                 raise NotImplementedError
             else:
                 feats = [element.features]
-            inp: List[str] = src
             if self.pos:
-                inp += pos
+                surface_form += part_of_speech
             if self.morph:
-                inp += feats
+                surface_form += feats
             if eos_after:
-                inp += [constant.EOS]
-            inp: List[int] = combined_vocab.map(inp)
-            processed_sent: List[List[int]] = [inp]
+                surface_form += [constant.EOS]
+            surface_form: List[int] = combined_vocab.map(surface_form)
             if not self.use_vb_lemmas:
-                lem = [constant.SOS, constant.EOS]
+                lemma_input: List[str] = [constant.SOS, constant.EOS]
             else:
-                lem: str = element.processed_lemma_candidates
-                lem: List[str] = list(lem)  # list of chars
-                lem: List[str] = [constant.SOS] + lem + [constant.EOS]
-            lem: List[int] = combined_vocab.map(lem)
-            processed_sent += [lem]
-            tgt = list(element.true_lemma)
-            tgt_in = combined_vocab.map([constant.SOS] + tgt)
-            tgt_out = combined_vocab.map(tgt + [constant.EOS])
-            processed_sent += [tgt_in]
-            processed_sent += [tgt_out]
-            processed.append(processed_sent)
+                lemma_input: str = element.processed_lemma_candidates
+                lemma_input: List[str] = list(lemma_input)  # list of chars
+                lemma_input: List[str] = [constant.SOS] + lemma_input + [constant.EOS]
+            lemma_input: List[int] = combined_vocab.map(lemma_input)
+            target: List[str] = list(element.true_lemma)
+            target_in: List[int] = combined_vocab.map([constant.SOS] + target)
+            target_out: List[int] = combined_vocab.map(target + [constant.EOS])
+
+            input_element = AdHocInput(
+                src_input=surface_form,
+                lemma_input=lemma_input,
+                target_in=target_in,
+                target_out=target_out,
+            )
+            processed.append(input_element)
         return processed
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, key: int) -> AdHocModelInput:
+        """ Get a batch with index. """
+        if not isinstance(key, int):
+            raise KeyError
+        if key < 0 or key >= len(self.data):
+            raise IndexError
+        batch: List[AdHocInput] = self.data[key]
+        batch_size: int = len(batch)
+        assert len(batch) == self.batch_size
+        tmp_batch: List[Tuple[List[int], ...]] = []
+        for element in batch:
+            if element.target_in is not None and element.target_out is not None:
+                tmp_batch.append(
+                    (element.src_input, element.lemma_input, element.target_in, element.target_out)
+                )
+        batch: List[Tuple[List[int], ...]] = tmp_batch
+        batch = list(zip(*batch))
+        assert len(batch) == 4
+
+        # sort all fields by lens for easy RNN operations
+        lens = [len(x) for x in batch[0]]
+        batch, orig_idx = sort_all(batch, lens)
+
+        # convert to tensors
+        src = batch[0]
+        src = get_long_tensor(src, batch_size)
+        src_mask = torch.eq(src, constant.PAD_ID)
+        lem = batch[1]
+        lem = get_long_tensor(lem, batch_size)
+        lem_mask = torch.eq(lem, constant.PAD_ID)
+        tgt_in = get_long_tensor(batch[2], batch_size)
+        tgt_out = get_long_tensor(batch[3], batch_size)
+        assert tgt_in.size(1) == tgt_out.size(1), "Target input and output sequence sizes do not match."
+        return AdHocModelInput(
+            src=src,
+            src_mask=src_mask,
+            lem=lem,
+            lem_mask=lem_mask,
+            tgt_in=tgt_in,
+            tgt_out=tgt_out,
+            orig_idx=orig_idx
+        )
+
+    def __iter__(self):
+        for i in range(self.__len__()):
+            yield self.__getitem__(i)

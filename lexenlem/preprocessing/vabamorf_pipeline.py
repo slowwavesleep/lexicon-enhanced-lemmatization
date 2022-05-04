@@ -32,6 +32,8 @@ class VbTokenAnalysis:
 class AdHocInput:
     src_input: List[int]  # contains form itself + concatenated pos and features
     lemma_input: List[int]
+    target_in: Optional[List[int]] = None
+    target_out: Optional[List[int]] = None
 
 
 @dataclass
@@ -41,18 +43,26 @@ class AdHocModelInput:
     lem: torch.tensor
     lem_mask: torch.tensor
     orig_idx: List[int]
+    tgt_in: Optional[torch.tensor] = None
+    tgt_out: Optional[torch.tensor] = None
 
     def cuda(self):
         self.src.cuda()
         self.src_mask.cuda()
         self.lem.cuda()
         self.lem_mask.cuda()
+        if self.tgt_in is not None and self.tgt_out is not None:
+            self.tgt_in.cuda()
+            self.tgt_out.cuda()
 
     def cpu(self):
         self.src.cpu()
         self.src_mask.cpu()
         self.lem.cpu()
         self.lem_mask.cpu()
+        if self.tgt_in is not None and self.tgt_out is not None:
+            self.tgt_in.cpu()
+            self.tgt_out.cpu()
 
 
 class VbPipeline:
