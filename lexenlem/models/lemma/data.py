@@ -211,7 +211,7 @@ class DataLoaderCombined:
 
 
 @dataclass(frozen=True)
-class Config:
+class DataLoaderVbConfig:
     morph: bool = True
     pos: bool = True
     sample_train: float = 1.
@@ -226,7 +226,7 @@ class DataLoaderVb:
             self,
             input_src: str,
             batch_size: int,
-            config: Optional[Config] = None,
+            config: Optional[DataLoaderVbConfig] = None,
             vocab: Optional[MultiVocab] = None,
             evaluation: bool = False,
             use_vb_lemmas: bool = True,
@@ -238,7 +238,7 @@ class DataLoaderVb:
         self.use_vb_lemmas = use_vb_lemmas
 
         if not config:
-            self.config = Config()
+            self.config = DataLoaderVbConfig()
 
         self.analyzer = VbPipeline(
             use_context=True,
