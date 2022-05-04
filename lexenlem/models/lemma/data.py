@@ -214,7 +214,7 @@ class DataLoaderCombined:
 class Config:
     morph: bool = True
     pos: bool = True
-    sample_train: float = 1.0
+    sample_train: float = 1.
     lang: str = "et"
     eos_after: bool = False
     split_feats: bool = False
@@ -253,39 +253,38 @@ class DataLoaderVb:
         print("Using Vabamorf morphological features:", self.morph)
         print("Using Vabamorf determined parts of speech:", self.pos)
 
-        # check if input source is a file or a Document object
         if isinstance(input_src, str):
             assert input_src.endswith("conllu"), "Loaded file must be conllu file."
             with open(input_src) as file:
-                data: str = file.read()
-            data: List[TokenList] = parse(data)
+                raw_data: str = file.read()
+            raw_data: List[TokenList] = parse(raw_data)
         else:
             raise TypeError("Incorrect input format.")
 
-        data: List[VbTokenAnalysis] = self._analyze(data)
+        analyzed_data: List[VbTokenAnalysis] = self._analyze(raw_data)
 
         # handle vocab
         if vocab is not None:
             self.vocab = vocab
         else:
             self.vocab = dict()
-            combined_vocab = self._init_vocab(data)
+            combined_vocab = self._init_vocab(analyzed_data)
             self.vocab = MultiVocab({"combined": combined_vocab})
 
         # filter and sample data
-        # if config.sample_train < 1.0 and not self.eval:
-        #     keep = int(config.sample_train * len(data))
-        #     data = random.sample(data, keep)
-        #     print("Subsample training set with rate {:g}".format(config.sample_train))
+        if self.config.sample_train < 1.0 and not self.eval:
+            keep = int(self.config.sample_train * len(analyzed_data))
+            analyzed_data = random.sample(analyzed_data, keep)
+            print("Subsample training set with rate {:g}".format(self.config.sample_train))
 
         # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
-        data: List[AdHocInput] = self._preprocess(data, self.vocab["combined"])
+        data: List[AdHocInput] = self._preprocess(analyzed_data, self.vocab["combined"])
         # shuffle for training
-        # if self.shuffled:
-        #     indices = list(range(len(data)))
-        #     random.shuffle(indices)
-        #     data = [data[i] for i in indices]
-        # self.num_examples = len(data)
+        if self.shuffled:
+            indices = list(range(len(data)))
+            random.shuffle(indices)
+            data = [data[i] for i in indices]
+        self.num_examples = len(data)
 
         # chunk into batches
         data: List[List[AdHocInput]] = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
@@ -315,9 +314,6 @@ class DataLoaderVb:
             else:
                 feats_data.append(token.features)
         char_data = list("".join(char_data))
-        # char_data = list("".join(d[0] + d[2] for d in data))
-        # pos_data = ['POS=' + d[1] for d in data]
-        # feats_data = make_feats_data(data)
         combined_data = char_data + pos_data + feats_data
         combined_vocab = Vocab(combined_data, self.config.lang)
         return combined_vocab
