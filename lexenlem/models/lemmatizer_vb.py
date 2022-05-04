@@ -317,28 +317,10 @@ def evaluate(args):
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
 
-    print("[Loading the outer lemmatizer...]")
-    if args['lemmatizer'] != loaded_args['lemmatizer'] and loaded_args['lemmatizer'] is None:
-        loaded_args['lemmatizer'] = args['lemmatizer']
-    if loaded_args['lemmatizer'] == 'lexicon' and args['lemmatizer'] not in ['lexicon', None]:
-        loaded_args['lemmatizer'] = 'lexicon_extended'
-    if loaded_args['lemmatizer'] is None:
-        lemmatizer = None
-    elif loaded_args['lemmatizer'] == 'lexicon':
-        print("[Using the lexicon...]")
-        lemmatizer = trainer.lexicon
-    elif loaded_args['lemmatizer'] == 'lexicon_extended':
-        print(f"[Loading the Lexicon extended with the {args['lemmatizer']} lemmatizer...]")
-        lemmatizer = ExtendedLexicon(trainer.lexicon,
-                                     importlib.import_module('lexenlem.lemmatizers.' + args['lemmatizer']))
-    else:
-        print(f"[Loading the {loaded_args['lemmatizer']} lemmatizer...]")
-        lemmatizer = importlib.import_module('lexenlem.lemmatizers.' + loaded_args['lemmatizer'])
-
-    # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoaderCombined(args['eval_file'], args['batch_size'], loaded_args, lemmatizer=lemmatizer, vocab=vocab,
-                               evaluation=True)
+    batch = DataLoaderVb(
+        args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True
+    )
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
