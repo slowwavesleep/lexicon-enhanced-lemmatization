@@ -13,13 +13,13 @@ import argparse
 import numpy as np
 import random
 import torch
-import importlib
+from tqdm.auto import tqdm
 
-from lexenlem.models.lemma.data import DataLoaderCombined, DataLoaderVbConfig, DataLoaderVb
-from lexenlem.models.lemma.trainer import TrainerCombined, TrainerVb
+from lexenlem.models.lemma.data import DataLoaderVbConfig, DataLoaderVb
+from lexenlem.models.lemma.trainer import TrainerVb
 from lexenlem.models.lemma import scorer, edit
 from lexenlem.models.common import utils
-from lexenlem.models.common.lexicon import ExtendedLexicon
+
 
 # TODO:
 # 0. Update evaluate
@@ -310,7 +310,7 @@ def evaluate(args):
 
     # load model
     use_cuda = args['cuda'] and not args['cpu']
-    trainer = TrainerCombined(model_file=model_file, use_cuda=use_cuda)
+    trainer = TrainerVb(model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in args:
@@ -318,69 +318,35 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoaderVb(
-        args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True
+    config = DataLoaderVbConfig(
+        morph=not loaded_args.get("no_morph", False),
+        pos=not loaded_args.get("no_pos", False),
+        lang="et",
+        eos_after=loaded_args.get("eos_after", False),
+        split_feats=False,
+    )
+
+    dataloader = DataLoaderVb(
+        input_src=args['eval_file'], batch_size=args['batch_size'], config=config, vocab=vocab, evaluation=True
     )
 
     # skip eval if dev data does not exist
-    if len(batch) == 0:
+    if len(dataloader) == 0:
         print("Skip evaluation because no dev data is available...")
         print("Lemma score:")
         print("{} ".format(args['lang']))
         sys.exit(0)
 
-    dict_preds = trainer.predict_dict(batch.conll.get(['word', 'upos']))
-
-    if loaded_args.get('dict_only', False):
-        preds = dict_preds
-    else:
-        print("Running the seq2seq model...")
-        preds = []
-        edits = []
-        log_attns = {}
-        for i, b in enumerate(batch):
-            ps, es, attns = trainer.predict(b, args['beam_size'], log_attn=args['log_attn'])
-            if attns:
-                for k, _ in attns.items():
-                    if k in log_attns:
-                        if k == 'attns':
-                            if log_attns[k].shape[0] > attns[k].shape[0]:
-                                attns[k] = np.vstack((attns[k], np.zeros(
-                                    (log_attns[k].shape[0] - attns[k].shape[0], attns[k].shape[1], attns[k].shape[2]))))
-                            else:
-                                log_attns[k] = np.vstack((log_attns[k], np.zeros((
-                                    attns[k].shape[0] - log_attns[k].shape[
-                                        0], log_attns[k].shape[1],
-                                    log_attns[k].shape[2]))))
-                            log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=2)
-                        elif k == 'all_hyp':
-                            log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)
-                        else:
-                            if log_attns[k].shape[1] > attns[k].shape[1]:
-                                attns[k] = np.hstack((attns[k], np.zeros(
-                                    (attns[k].shape[0], log_attns[k].shape[1] - attns[k].shape[1]))))
-                            else:
-                                log_attns[k] = np.hstack((log_attns[k], np.zeros(
-                                    (log_attns[k].shape[0], attns[k].shape[1] - log_attns[k].shape[1]))))
-                            log_attns[k] = np.concatenate([log_attns[k], attns[k]], axis=0)
-                    else:
-                        log_attns[k] = attns[k]
-            preds += ps
-            if es is not None:
-                edits += es
-        if args['log_attn']:
-            lem_name = loaded_args['lemmatizer'] if loaded_args['lemmatizer'] is not None else 'nolexicon'
-            fname = ''.join([args['lang'], '_', lem_name])
-            print(f'[Logging attention to {fname}.npz...]')
-            np.savez(fname, **log_attns)
-        preds = trainer.postprocess(batch.conll.get(['word']), preds, edits=edits)
-
-        if loaded_args.get('ensemble_dict', False):
-            print("[Ensembling dict with seq2seq lemmatizer...]")
-            preds = trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
+    preds = []
+    for i, batch in tqdm(
+            enumerate(dataloader), desc="Running the seq2seq model in `predict` mode...", total=len(dataloader)
+    ):
+        batch_preds, _ = trainer.predict(batch, args['beam_size'], log_attn=args['log_attn'])
+        preds += batch_preds
+    preds = trainer.postprocess(dataloader.original_tokens, preds)
 
     # write to file and score
-    batch.conll.write_conll_with_lemmas(preds, system_pred_file)
+    dataloader.write_to_conll(preds, system_pred_file)
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 

@@ -419,7 +419,9 @@ class TrainerVb(Trainer):
         self.model.load_state_dict(checkpoint['model'])
 
     def postprocess(self, words, preds):
-        assert len(words) == len(preds), "Lemma predictions must have same length as words."
+        if len(words) != len(preds):
+            print(len(words), len(preds))
+            raise RuntimeError("Lemma predictions must have same length as words.")
         final = []
         for lem, w in zip(preds, words):
             if len(lem) == 0 or constant.UNK in lem:
