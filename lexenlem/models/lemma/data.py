@@ -281,11 +281,11 @@ class DataLoaderVb:
             self.vocab = vocab
         else:
             self.vocab = dict()
-            combined_vocab = self._init_vocab(self._flat_analysis)
+            combined_vocab = self._init_vocab(self.flat_analysis)
             self.vocab = MultiVocab({"combined": combined_vocab})
 
         # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
-        data: List[AdHocInput] = self._preprocess(self._flat_analysis, self.vocab["combined"])
+        data: List[AdHocInput] = self._preprocess(self.flat_analysis, self.vocab["combined"])
         # shuffle for training
         if self.shuffled:
             indices = list(range(len(data)))
@@ -314,19 +314,19 @@ class DataLoaderVb:
         return result
 
     @property
-    def _flat_analysis(self) -> List[VbTokenAnalysis]:
+    def flat_analysis(self) -> List[VbTokenAnalysis]:
         return list(chain(*self._analyzed_data.values()))
 
     @property
     def original_tokens(self) -> List[str]:
         if self.eval:
-            return [token.token for token in self._flat_analysis]
+            return [token.token for token in self.flat_analysis]
         else:
             raise RuntimeError("Not available in eval mode")
 
     def _process_predictions(self, predictions: List[str]):
         result: List[VbTokenAnalysis] = []
-        for token_analysis, predicted_lemma in zip(self._flat_analysis, predictions):
+        for token_analysis, predicted_lemma in zip(self.flat_analysis, predictions):
             result.append(dataclasses.replace(token_analysis, predicted_lemma=predicted_lemma))
         return result
 

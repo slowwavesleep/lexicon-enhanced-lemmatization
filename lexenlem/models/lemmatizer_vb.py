@@ -129,6 +129,8 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    parser.add_argument('--identity_baseline', action='store_true')
+    parser.add_argument('--vabamorf_baseline', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -145,6 +147,8 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
+    if args.get("identity_baseline", False) and args.get("vabamorf_baseline", False):
+        raise RuntimeError("VB or IDENTITY")
     print("Running lemmatizer in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
@@ -338,12 +342,17 @@ def evaluate(args):
         sys.exit(0)
 
     preds = []
-    for i, batch in tqdm(
-            enumerate(dataloader), desc="Running the seq2seq model in `predict` mode...", total=len(dataloader)
-    ):
-        batch_preds, _ = trainer.predict(batch, args['beam_size'], log_attn=args['log_attn'])
-        preds += batch_preds
-    preds = trainer.postprocess(dataloader.original_tokens, preds)
+    if args["identity_baseline"]:
+        preds.extend(dataloader.original_tokens)
+    elif args["vabamorf_baseline"]:
+        preds.extend([element.disambiguated_lemma for element in dataloader.flat_analysis])
+    else:
+        for i, batch in tqdm(
+                enumerate(dataloader), desc="Running the seq2seq model in `predict` mode...", total=len(dataloader)
+        ):
+            batch_preds, _ = trainer.predict(batch, args['beam_size'], log_attn=args['log_attn'])
+            preds += batch_preds
+        preds = trainer.postprocess(dataloader.original_tokens, preds)
 
     # write to file and score
     dataloader.write_to_conll(preds, system_pred_file)
