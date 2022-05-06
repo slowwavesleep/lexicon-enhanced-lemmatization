@@ -1,6 +1,7 @@
 from collections import namedtuple
 from itertools import zip_longest
 from pprint import pprint
+from hashlib import md5
 
 
 from conllu import parse
@@ -117,11 +118,14 @@ def check_vb():
     return correct/total
 
 
-def check_c():
-    with open("./data/et_edt-ud-test.conllu") as file:
+def check_hash():
+    with open("./data/et_edt-ud-train.conllu") as file:
         data = file.read()
 
     parsed = parse(data)
+    parsed = {item.metadata["sent_id"]: item for item in parsed}
 
-    return parsed
+    hashed = md5(str(sorted(list(parsed.keys()))).encode("utf-8")).hexdigest()
+
+    return hashed
 

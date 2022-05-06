@@ -1,3 +1,5 @@
+import json
+import os.path
 import random
 from collections import defaultdict
 from copy import deepcopy
@@ -5,6 +7,7 @@ from dataclasses import dataclass
 import dataclasses
 from itertools import chain
 from typing import List, Union, Tuple, Optional, Dict
+from hashlib import md5
 
 import torch
 from tqdm.auto import tqdm
@@ -14,6 +17,7 @@ from conllu.models import TokenList
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.data import get_long_tensor, sort_all
 from lexenlem.models.common import conll
+from lexenlem.models.common.utils import ensure_dir
 from lexenlem.models.lemma.vocab import Vocab, MultiVocab
 from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
@@ -234,12 +238,22 @@ class DataLoaderVb:
             vocab: Optional[MultiVocab] = None,
             evaluation: bool = False,
             use_vb_lemmas: bool = True,
+            cache_dir: Optional[str] = None,
+            invalidate_cache: bool = False,
+            sampling_seed: Optional[int] = None,
     ):
         self.batch_size = batch_size
         self.config = config
         self.eval = evaluation
         self.shuffled = not self.eval
         self.use_vb_lemmas = use_vb_lemmas
+        self.sampling_seed = sampling_seed
+
+        if cache_dir is None:
+            self.cache_dir = "./cache"
+        else:
+            self.cache_dir = cache_dir
+        ensure_dir(self.cache_dir)
 
         if not config:
             self.config = DataLoaderVbConfig()
@@ -261,21 +275,46 @@ class DataLoaderVb:
             assert input_src.endswith("conllu"), "Loaded file must be conllu file."
             with open(input_src) as file:
                 raw_data: str = file.read()
-            self._parsed_data: Dict[str, TokenList] = {
-                token_list.metadata["sent_id"]: token_list for token_list in parse(raw_data)
-            }
         else:
             raise TypeError("Incorrect input format.")
+
+        self._parsed_data: Dict[str, TokenList] = {
+            token_list.metadata["sent_id"]: token_list for token_list in parse(raw_data)
+        }
 
         # filter and sample data
         if self.config.sample_train < 1.0 and not self.eval:
             keys = self._parsed_data.keys()
             keep = int(self.config.sample_train * len(keys))
-            keys = random.sample(keys, keep)
+            # set seed to be able to cache sampled data
+            if self.sampling_seed:
+                rng = random.Random(sampling_seed)
+                keys = rng.sample(keys, keep)
+            else:
+                keys = random.sample(keys, keep)
             self._parsed_data = {key: value for key, value in self._parsed_data.items() if key in keys}
             print("Subsample training set with rate {:g}".format(self.config.sample_train))
 
-        self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._analyze(list(self._parsed_data.values()))
+        # load from cache if possible
+        self._hash_id = md5(
+            str(
+                sorted(
+                    list(self._parsed_data.keys())
+                )
+            ).encode("utf-8")
+        ).hexdigest()
+        self._cache_file = f"{self.cache_dir}/{self._hash_id}"
+
+        if invalidate_cache and os.path.exists(self._cache_file):
+            os.remove(self._cache_file)
+
+        if os.path.exists(self._cache_file):
+            print("Loading cached data...")
+            self._deserialize_analyzed_data()
+        else:
+            self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._analyze(list(self._parsed_data.values()))
+            self._cache_analyzed_data()
+
         # handle vocab
         if vocab is not None:
             self.vocab = vocab
@@ -286,6 +325,7 @@ class DataLoaderVb:
 
         # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
         data: List[AdHocInput] = self._preprocess(self.flat_analysis, self.vocab["combined"])
+
         # shuffle for training
         if self.shuffled:
             indices = list(range(len(data)))
@@ -297,6 +337,28 @@ class DataLoaderVb:
         # chunk into batches
         data: List[List[AdHocInput]] = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
+
+    def _serialize_analyzed_data(self) -> str:
+        result = []
+        for key, data in self._analyzed_data.items():
+            serialized = json.dumps(
+                {key: [dataclasses.asdict(element) for element in data]}
+            )
+            result.append(serialized)
+        return "\n".join(result)
+
+    def _deserialize_analyzed_data(self) -> None:
+        result = {}
+        with open(self._cache_file) as file:
+            for line in file:
+                deserialized = json.loads(line)
+                for key, value in deserialized.items():
+                    result[key] = [VbTokenAnalysis(**element) for element in value]
+        self._analyzed_data = result
+
+    def _cache_analyzed_data(self) -> None:
+        with open(self._cache_file, "w") as file:
+            file.write(self._serialize_analyzed_data())
 
     def _analyze(self, data: List[TokenList]) -> Dict[str, List[VbTokenAnalysis]]:
         result: Dict[str, List[VbTokenAnalysis]] = defaultdict(lambda: [])

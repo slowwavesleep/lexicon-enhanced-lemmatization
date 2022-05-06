@@ -22,11 +22,12 @@ from lexenlem.models.common import utils
 
 
 # TODO:
-# 0. Update evaluate
+# 0. Update evaluate +
 # 1. Add keyboard interrupt
 # 2. Add TQDM
 # 3. Add logging
 # 4. Add config class
+# 5. Cache vabamorf analysis (hash input conll -> save processed to cache in json lines format) +
 
 
 def parse_args():
@@ -148,7 +149,7 @@ def main():
 
     args = vars(args)
     if args.get("identity_baseline", False) and args.get("vabamorf_baseline", False):
-        raise RuntimeError("VB or IDENTITY")
+        raise RuntimeError("vb OR identity")
     print("Running lemmatizer in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
