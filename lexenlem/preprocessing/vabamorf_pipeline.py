@@ -61,14 +61,14 @@ class AdHocModelInput:
             self.tgt_out = self.tgt_out.cuda()
 
     def cpu(self):
-        self.src.cpu()
-        self.src_mask.cpu()
-        self.lem.cpu()
-        self.lem_mask.cpu()
+        self.src = self.src.cpu()
+        self.src_mask = self.src_mask.cpu()
+        self.lem = self.lem.cpu()
+        self.lem_mask = self.lem_mask.cpu()
         if self.tgt_in is not None:
-            self.tgt_in.cpu()
+            self.tgt_in = self.tgt_in.cpu()
         if self.tgt_out is not None:
-            self.tgt_out.cpu()
+            self.tgt_out = self.tgt_out.cpu()
 
 
 class VbPipeline:
