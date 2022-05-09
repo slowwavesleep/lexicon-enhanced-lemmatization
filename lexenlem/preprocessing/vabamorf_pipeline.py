@@ -55,8 +55,9 @@ class AdHocModelInput:
         self.src_mask.cuda()
         self.lem.cuda()
         self.lem_mask.cuda()
-        if self.tgt_in is not None and self.tgt_out is not None:
+        if self.tgt_in is not None:
             self.tgt_in.cuda()
+        if self.tgt_out is not None:
             self.tgt_out.cuda()
 
     def cpu(self):
@@ -64,8 +65,9 @@ class AdHocModelInput:
         self.src_mask.cpu()
         self.lem.cpu()
         self.lem_mask.cpu()
-        if self.tgt_in is not None and self.tgt_out is not None:
+        if self.tgt_in is not None:
             self.tgt_in.cpu()
+        if self.tgt_out is not None:
             self.tgt_out.cpu()
 
 
