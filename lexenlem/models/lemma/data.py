@@ -13,6 +13,7 @@ import torch
 from tqdm.auto import tqdm
 from conllu import parse
 from conllu.models import TokenList
+from loguru import logger
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.data import get_long_tensor, sort_all
@@ -23,6 +24,9 @@ from lexenlem.models.lemma import edit
 from lexenlem.models.common.doc import Document
 from lexenlem.models.common.lexicon import Lexicon, ExtendedLexicon
 from lexenlem.preprocessing.vabamorf_pipeline import VbPipeline, VbTokenAnalysis, AdHocInput, AdHocModelInput
+
+logger.remove()
+logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 
 
 def make_feats_data(data: List[List[str]], feats_idx: int = 3) -> List[str]:
@@ -268,8 +272,8 @@ class DataLoaderVb:
         )
         self.morph = self.config.morph
         self.pos = self.config.pos
-        print("Using Vabamorf morphological features:", self.morph)
-        print("Using Vabamorf determined parts of speech:", self.pos)
+        logger.info(f"Using Vabamorf morphological features: {self.morph}")
+        logger.info(f"Using Vabamorf determined parts of speech: {self.pos}")
 
         if isinstance(input_src, str):
             assert input_src.endswith("conllu"), "Loaded file must be conllu file."
@@ -293,7 +297,7 @@ class DataLoaderVb:
             else:
                 keys = random.sample(keys, keep)
             self._parsed_data = {key: value for key, value in self._parsed_data.items() if key in keys}
-            print("Subsample training set with rate {:g}".format(self.config.sample_train))
+            logger.info("Subsample training set with rate {:g}".format(self.config.sample_train))
 
         # identify parsed data
         self._hash_id = self._hash_parsed_data()
@@ -305,7 +309,7 @@ class DataLoaderVb:
 
         # load from cache if possible
         if os.path.exists(self._cache_file):
-            print(f"Loading cached data (md5: {self._hash_id})...")
+            logger.info(f"Loading cached data (md5: {self._hash_id})...")
             self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._deserialize_analyzed_data()
         else:
             self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._analyze(list(self._parsed_data.values()))

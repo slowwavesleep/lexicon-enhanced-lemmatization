@@ -4,6 +4,8 @@ Pytorch implementation of basic sequence to Sequence modules.
 
 import torch
 import torch.nn as nn
+from loguru import logger
+from tqdm.auto import tqdm
 
 import lexenlem.models.common.seq2seq_constant as constant
 
@@ -232,7 +234,7 @@ class LSTMAttention(nn.Module):
             self.attention_layer = DeepAttention(hidden_size)
         else:
             raise NotImplementedError("Unsupported LSTM attention type: {}".format(attn_type))
-        print("Using {} attention for LSTM.".format(attn_type))
+        logger.info("Using {} attention for LSTM.".format(attn_type))
 
     def forward(self, input, hidden, ctx, ctx_mask=None):
         """Propagate input through the network."""

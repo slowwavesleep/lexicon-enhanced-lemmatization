@@ -7,6 +7,8 @@ from collections import Counter
 
 import numpy as np
 import torch
+from tqdm.auto import tqdm
+from loguru import logger
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common.seq2seq_model import Seq2SeqModel, Seq2SeqModelCombined
@@ -14,6 +16,9 @@ from lexenlem.models.common import utils, loss
 from lexenlem.models.lemma import edit
 from lexenlem.models.lemma.vocab import MultiVocab
 from lexenlem.preprocessing.vabamorf_pipeline import AdHocModelInput
+
+logger.remove()
+logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 
 
 def unpack_batch(batch, use_cuda: bool):
@@ -347,11 +352,11 @@ class TrainerVb(Trainer):
         self.crit = loss.SequenceLoss(self.vocab['combined'].size)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if use_cuda:
-            print("Using CUDA...")
+            logger.info("Using CUDA...")
             self.model.cuda()
             self.crit.cuda()
         else:
-            print("Using CPU...")
+            logger.info("Using CPU...")
             self.model.cpu()
             self.crit.cpu()
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
@@ -423,7 +428,6 @@ class TrainerVb(Trainer):
 
     def postprocess(self, words, preds):
         if len(words) != len(preds):
-            print(len(words), len(preds))
             raise RuntimeError("Lemma predictions must have same length as words.")
         final = []
         for lem, w in zip(preds, words):

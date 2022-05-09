@@ -8,6 +8,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
+from loguru import logger
+from tqdm.auto import tqdm
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common import utils
@@ -36,8 +38,8 @@ class Seq2SeqModel(nn.Module):
         self.emb_matrix = emb_matrix
         self.vocab = vocab
 
-        print("Building an attentional Seq2Seq model...")
-        print("Using a Bi-LSTM encoder")
+        logger.info("Building an attentional Seq2Seq model...")
+        logger.info("Using a Bi-LSTM encoder")
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
@@ -72,19 +74,19 @@ class Seq2SeqModel(nn.Module):
         )
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
         if self.use_pos and self.pos_dim > 0:
-            print("Using POS in encoder")
+            logger.info("Using POS in encoder")
             if self.pos_first:
-                print("Putting POS before source in the encoder")
+                logger.info("Putting POS before source in the encoder")
             self.pos_embedding = nn.Embedding(self.pos_vocab_size, self.pos_dim, self.pad_token)
             self.pos_drop = nn.Dropout(self.pos_dropout)
         if self.use_feats and self.pos_dim > 0:
-            print("Using FEATS in encoder")
+            logger.info("Using FEATS in encoder")
             self.feats_embedding = nn.ModuleList()
             for l in self.vocab['feats'].lens():
                 self.feats_embedding.append(nn.Embedding(l, self.pos_dim, self.pad_token))
             self.feats_drop = nn.Dropout(self.pos_dropout)
         if self.use_vabamorf:
-            print("Using Vabamorf lemmas in the encoder")
+            logger.info("Using Vabamorf lemmas in the encoder")
         if self.edit:
             edit_hidden = self.hidden_dim // 2
             self.edit_clf = nn.Sequential(
@@ -110,13 +112,13 @@ class Seq2SeqModel(nn.Module):
             self.embedding.weight.data.uniform_(-init_range, init_range)
         # decide finetuning
         if self.top <= 0:
-            print("Do not finetune embedding layer.")
+            logger.info("Do not finetune embedding layer.")
             self.embedding.weight.requires_grad = False
         elif self.top < self.vocab_size:
-            print("Finetune top {} embeddings.".format(self.top))
+            logger.info("Finetune top {} embeddings.".format(self.top))
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
-            print("Finetune all embeddings.")
+            logger.info("Finetune all embeddings.")
         # initialize pos embeddings
         if self.use_pos:
             self.pos_embedding.weight.data.uniform_(-init_range, init_range)
@@ -325,10 +327,10 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         self.vocab = vocab
         self.log_attn = args['log_attn']
 
-        print("Building an attentional Seq2Seq model...")
-        print("Using a Bi-LSTM encoder")
-        print("Using a lexicon:", self.is_lexicon)
-        print("Lexicon dropout:", self.lexicon_dropout)
+        logger.info("Building an attentional Seq2Seq model...")
+        logger.info("Using a Bi-LSTM encoder")
+        logger.info("Using a lexicon:", self.is_lexicon)
+        logger.info("Lexicon dropout:", self.lexicon_dropout)
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
@@ -389,13 +391,13 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             self.embedding.weight.data.uniform_(-init_range, init_range)
         # decide finetuning
         if self.top <= 0:
-            print("Do not finetune embedding layer.")
+            logger.info("Do not finetune embedding layer.")
             self.embedding.weight.requires_grad = False
         elif self.top < self.vocab_size:
-            print("Finetune top {} embeddings.".format(self.top))
+            logger.info("Finetune top {} embeddings.".format(self.top))
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
-            print("Finetune all embeddings.")
+            logger.info("Finetune all embeddings.")
 
     def encode(self, encoder, enc_inputs, lens):
         """ Encode source sequence. """
@@ -608,7 +610,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             all_hyp += [hyp]
 
         if log_attn:
-            print('[Logging attention scores...]')
+            logger.info('[Logging attention scores...]')
             log_attn = {
                 'src': src.tolist(),
                 'lem': lem.tolist(),

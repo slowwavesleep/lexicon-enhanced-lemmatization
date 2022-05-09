@@ -29,5 +29,6 @@ setup(
         "cached-property==1.5.2",
         "backcall==0.2.0",
         "stanza==1.2.3",
+        "loguru==0.6.0",
     ]
 )
