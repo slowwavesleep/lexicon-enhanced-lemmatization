@@ -347,14 +347,18 @@ class TrainerVb(Trainer):
         self.crit = loss.SequenceLoss(self.vocab['combined'].size)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if use_cuda:
+            print("Using CUDA...")
             self.model.cuda()
             self.crit.cuda()
         else:
+            print("Using CPU...")
             self.model.cpu()
             self.crit.cpu()
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch: AdHocModelInput, evaluate: bool = False):
+
+        print(self.use_cuda)
 
         if self.use_cuda:
             batch.cuda()

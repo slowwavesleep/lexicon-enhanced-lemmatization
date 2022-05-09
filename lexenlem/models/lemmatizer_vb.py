@@ -194,6 +194,7 @@ def train(args):
 
     # start training
     # train a dictionary-based lemmatizer
+    print(args["cuda"])
     trainer = TrainerVb(args=args, vocab=vocab, use_cuda=args['cuda'])
 
     # if args['lemmatizer'] == 'lexicon':
