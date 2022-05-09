@@ -358,19 +358,10 @@ class TrainerVb(Trainer):
 
     def update(self, batch: AdHocModelInput, evaluate: bool = False):
 
-        print(self.use_cuda)
-
         if self.use_cuda:
-            print("Sending to CUDA...")
             batch.cuda()
         # inputs, _ = unpack_batch_combined(batch, self.use_cuda)
         # src, src_mask, lem, lem_mask, tgt_in, tgt_out = inputs
-
-        print(batch.src.device)
-        print(batch.src_mask.device)
-        print(batch.tgt_in.device)
-        print(batch.lem.device)
-        print(batch.lem_mask.device)
 
         if evaluate:
             self.model.eval()
