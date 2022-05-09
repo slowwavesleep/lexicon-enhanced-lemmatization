@@ -170,12 +170,12 @@ def train(args):
         eos_after=args.get("eos_after", False),
         split_feats=False,
     )
-    train_batch = DataLoaderVb(
+    train_loader = DataLoaderVb(
         input_src=args['train_file'], batch_size=args['batch_size'], config=config, evaluation=False
     )
-    vocab = train_batch.vocab
+    vocab = train_loader.vocab
     args['vocab_size'] = vocab['combined'].size
-    dev_batch = DataLoaderVb(
+    dev_loader = DataLoaderVb(
         input_src=args['eval_file'], batch_size=args['batch_size'], config=config, vocab=vocab, evaluation=True
     )
     utils.ensure_dir(args['model_dir'])
@@ -188,7 +188,7 @@ def train(args):
     utils.print_config(args)
 
     # skip training if the language does not have training or dev data
-    if len(train_batch) == 0 or len(dev_batch) == 0:
+    if len(train_loader) == 0 or len(dev_loader) == 0:
         print("[Skip training because no data available...]")
         sys.exit(0)
 
@@ -209,8 +209,8 @@ def train(args):
     # train a seq2seq model
     print("[Training seq2seq-based lemmatizer...]")
     global_step = 0
-    max_steps = len(train_batch) * args['num_epoch']
-    max_dev_steps = len(dev_batch)
+    max_steps = len(train_loader) * args['num_epoch']
+    max_dev_steps = len(dev_loader)
     dev_score_history = []
     devs_without_improvements = 0
     best_dev_preds = []
@@ -223,7 +223,7 @@ def train(args):
     for epoch in range(1, args['num_epoch'] + 1):
         dev_step = 0
         train_loss = 0
-        for i, batch in enumerate(train_batch):
+        for i, batch in enumerate(train_loader):
             start_time = time.time()
             global_step += 1
             loss = trainer.update(batch, evaluate=False)  # update step
@@ -246,7 +246,7 @@ def train(args):
         # eval on dev
         print("Evaluating on dev set...")
         dev_preds = []  # predictions for every token
-        for i, batch in enumerate(dev_batch):
+        for i, batch in enumerate(dev_loader):
             start_time = time.time()
             dev_step += 1
             preds, _ = trainer.predict(batch, 1)
@@ -263,17 +263,17 @@ def train(args):
                         duration
                     )
                 )
-        dev_preds = trainer.postprocess(dev_batch.original_tokens, dev_preds)  # list of original forms
+        dev_preds = trainer.postprocess(dev_loader.original_tokens, dev_preds)  # list of original forms
 
         # try ensembling with dict if necessary
         # if args.get('ensemble_dict', False):
         #     print("[Ensembling dict with seq2seq model...]")
         #     dev_preds = trainer.ensemble(dev_batch.conll.get(['word', 'upos']), dev_preds)
 
-        dev_batch.write_to_conll(dev_preds, system_pred_file)
+        dev_loader.write_to_conll(dev_preds, system_pred_file)
         _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
-        train_loss = train_loss / train_batch.num_examples * args['batch_size']  # avg loss per batch
+        train_loss = train_loss / train_loader.num_examples * args['batch_size']  # avg loss per batch
         print("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
 
         # save best model

@@ -355,10 +355,17 @@ class TrainerVb(Trainer):
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch: AdHocModelInput, evaluate: bool = False):
+
         if self.use_cuda:
             batch.cuda()
         # inputs, _ = unpack_batch_combined(batch, self.use_cuda)
         # src, src_mask, lem, lem_mask, tgt_in, tgt_out = inputs
+
+        print(batch.src.device)
+        print(batch.src_mask.device)
+        print(batch.tgt_in.device)
+        print(batch.lem.device)
+        print(batch.lem_mask.device)
 
         if evaluate:
             self.model.eval()
