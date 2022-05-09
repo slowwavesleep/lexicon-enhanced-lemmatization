@@ -1,3 +1,5 @@
+import dataclasses
+import json
 from collections import namedtuple
 from itertools import zip_longest
 from pprint import pprint
@@ -119,13 +121,30 @@ def check_vb():
 
 
 def check_hash():
-    with open("./data/et_edt-ud-train.conllu") as file:
+    with open("./data/et_edt-ud-test.conllu") as file:
         data = file.read()
 
     parsed = parse(data)
     parsed = {item.metadata["sent_id"]: item for item in parsed}
 
-    hashed = md5(str(sorted(list(parsed.keys()))).encode("utf-8")).hexdigest()
+    return parsed
 
-    return hashed
+    # pipe = VbPipeline()
+    #
+    # result = {}
+    # for key, value in tqdm(parsed.items()):
+    #     forms = [el["form"] for el in value]
+    #     result[key] = pipe(forms)
+    # result = dict(sorted(result.items()))
+    # new_result = []
+    # for key, data in result.items():
+    #     serialized = json.dumps(
+    #         {key: [dataclasses.asdict(element) for element in data]},
+    #         ensure_ascii=False,
+    #     )
+    #     new_result.append(serialized)
+    #
+    # hashed = md5("\n".join(new_result).encode("utf-8")).hexdigest()
+    #
+    # return hashed
 

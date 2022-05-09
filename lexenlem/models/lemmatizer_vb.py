@@ -42,11 +42,12 @@ def parse_args():
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', default="et", type=str, help='Language')
 
-    parser.add_argument('--no_dict',
-                        dest='ensemble_dict',
-                        action='store_false',
-                        help='Do not ensemble dictionary with seq2seq. By default use ensemble.',
-                        )
+    parser.add_argument(
+        '--no_dict',
+        dest='ensemble_dict',
+        action='store_false',
+        help='Do not ensemble dictionary with seq2seq. By default use ensemble.',
+    )
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
 
     parser.add_argument('--hidden_dim', type=int, default=200)

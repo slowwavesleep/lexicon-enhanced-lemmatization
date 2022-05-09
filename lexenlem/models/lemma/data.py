@@ -295,22 +295,18 @@ class DataLoaderVb:
             self._parsed_data = {key: value for key, value in self._parsed_data.items() if key in keys}
             print("Subsample training set with rate {:g}".format(self.config.sample_train))
 
-        # load from cache if possible
-        self._hash_id = md5(
-            str(
-                sorted(
-                    list(self._parsed_data.keys())
-                )
-            ).encode("utf-8")
-        ).hexdigest()
+        # identify parsed data
+        self._hash_id = self._hash_parsed_data()
         self._cache_file = f"{self.cache_dir}/{self._hash_id}"
 
+        # remove cached file if necessary
         if invalidate_cache and os.path.exists(self._cache_file):
             os.remove(self._cache_file)
 
+        # load from cache if possible
         if os.path.exists(self._cache_file):
-            print("Loading cached data...")
-            self._deserialize_analyzed_data()
+            print(f"Loading cached data (md5: {self._hash_id})...")
+            self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._deserialize_analyzed_data()
         else:
             self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._analyze(list(self._parsed_data.values()))
             self._cache_analyzed_data()
@@ -338,23 +334,28 @@ class DataLoaderVb:
         data: List[List[AdHocInput]] = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
+    def _hash_parsed_data(self) -> str:
+        serialized = "".join([sentence.serialize() for _, sentence in self._parsed_data.items()])
+        return md5(serialized.encode("utf-8")).hexdigest()
+
     def _serialize_analyzed_data(self) -> str:
         result = []
         for key, data in self._analyzed_data.items():
             serialized = json.dumps(
-                {key: [dataclasses.asdict(element) for element in data]}
+                {key: [dataclasses.asdict(element) for element in data]},
+                ensure_ascii=False,
             )
             result.append(serialized)
         return "\n".join(result)
 
-    def _deserialize_analyzed_data(self) -> None:
+    def _deserialize_analyzed_data(self) -> Dict[str, List[VbTokenAnalysis]]:
         result = {}
         with open(self._cache_file) as file:
             for line in file:
                 deserialized = json.loads(line)
                 for key, value in deserialized.items():
                     result[key] = [VbTokenAnalysis(**element) for element in value]
-        self._analyzed_data = result
+        return result
 
     def _cache_analyzed_data(self) -> None:
         with open(self._cache_file, "w") as file:
