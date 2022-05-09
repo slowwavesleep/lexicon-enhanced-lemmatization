@@ -51,14 +51,14 @@ class AdHocModelInput:
     tgt_out: Optional[torch.tensor] = None
 
     def cuda(self):
-        self.src.cuda()
-        self.src_mask.cuda()
-        self.lem.cuda()
-        self.lem_mask.cuda()
+        self.src = self.src.cuda()
+        self.src_mask = self.src_mask.cuda()
+        self.lem = self.lem.cuda()
+        self.lem_mask = self.lem_mask.cuda()
         if self.tgt_in is not None:
-            self.tgt_in.cuda()
+            self.tgt_in = self.tgt_in.cuda()
         if self.tgt_out is not None:
-            self.tgt_out.cuda()
+            self.tgt_out = self.tgt_out.cuda()
 
     def cpu(self):
         self.src.cpu()

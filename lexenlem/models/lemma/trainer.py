@@ -361,6 +361,7 @@ class TrainerVb(Trainer):
         print(self.use_cuda)
 
         if self.use_cuda:
+            print("Sending to CUDA...")
             batch.cuda()
         # inputs, _ = unpack_batch_combined(batch, self.use_cuda)
         # src, src_mask, lem, lem_mask, tgt_in, tgt_out = inputs
