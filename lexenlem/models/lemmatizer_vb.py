@@ -25,46 +25,46 @@ from lexenlem.models.common import utils
 # TODO:
 # 0. Update evaluate +
 # 1. Add keyboard interrupt
-# 2. Add TQDM
-# 3. Add logging
+# 2. Add TQDM +
+# 3. Add logging +
 # 4. Add config class
 # 5. Cache vabamorf analysis (hash input conll -> save processed to cache in json lines format) +
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='./data/lemma', help='Directory for all lemma data.')
-    parser.add_argument('--unimorph_dir', type=str, default='', help='Directory of unimorph file')
-    parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
+    parser.add_argument("--data_dir", type=str, default="./data/lemma", help="Directory for all lemma data.")
+    parser.add_argument("--unimorph_dir", type=str, default="", help="Directory of unimorph file")
+    parser.add_argument("--train_file", type=str, default=None, help="Input file for data loader.")
+    parser.add_argument("--eval_file", type=str, default=None, help="Input file for data loader.")
+    parser.add_argument("--gold_file", type=str, default=None, help="Output CoNLL-U file.")
+    parser.add_argument("--output_file", type=str, default=None, help="Output CoNLL-U file.")
 
-    parser.add_argument('--mode', default='train', choices=['train', 'predict'])
-    parser.add_argument('--lang', default="et", type=str, help='Language')
+    parser.add_argument("--mode", default="train", choices=["train", "predict"])
+    parser.add_argument("--lang", default="et", type=str, help="Language")
 
     parser.add_argument(
-        '--no_dict',
-        dest='ensemble_dict',
-        action='store_false',
-        help='Do not ensemble dictionary with seq2seq. By default use ensemble.',
+        "--no_dict",
+        dest="ensemble_dict",
+        action="store_false",
+        help="Do not ensemble dictionary with seq2seq. By default use ensemble.",
     )
-    parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
+    parser.add_argument("--dict_only", action="store_true", help="Only train a dictionary-based lemmatizer.")
 
-    parser.add_argument('--hidden_dim', type=int, default=200)
-    parser.add_argument('--emb_dim', type=int, default=50)
-    parser.add_argument('--num_layers', type=int, default=1)
-    parser.add_argument('--emb_dropout', type=float, default=0.5)
-    parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--max_dec_len', type=int, default=50)
-    parser.add_argument('--beam_size', type=int, default=1)
+    parser.add_argument("--hidden_dim", type=int, default=200)
+    parser.add_argument("--emb_dim", type=int, default=50)
+    parser.add_argument("--num_layers", type=int, default=1)
+    parser.add_argument("--emb_dropout", type=float, default=0.5)
+    parser.add_argument("--dropout", type=float, default=0.5)
+    parser.add_argument("--max_dec_len", type=int, default=50)
+    parser.add_argument("--beam_size", type=int, default=1)
 
-    parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
+    parser.add_argument("--attn_type", default="soft", choices=["soft", "mlp", "linear", "deep"], help="Attention type")
     parser.add_argument(
-        '--no_edit',
-        dest='edit',
-        action='store_false',
-        help='Do not use edit classifier in lemmatization. By default use an edit classifier.',
+        "--no_edit",
+        dest="edit",
+        action="store_false",
+        help="Do not use edit classifier in lemmatization. By default use an edit classifier.",
     )
     parser.add_argument(
         '--no_morph',
@@ -73,67 +73,67 @@ def parse_args():
         help='Do not use morphological tags as inputs. By default use pos and morphological tags.',
     )
     parser.add_argument(
-        '--no_pos',
-        dest='pos',
-        action='store_false',
-        help='Do not use pos tags as inputs. By default use pos and morphological tags.',
+        "--no_pos",
+        dest="pos",
+        action="store_false",
+        help="Do not use pos tags as inputs. By default use pos and morphological tags.",
     )
-    parser.add_argument('--lemmatizer', type=str, default=None, help='Name of the outer lemmatizer function')
+    parser.add_argument("--lemmatizer", type=str, default=None, help="Name of the outer lemmatizer function")
     parser.add_argument(
-        '--no_pos_lexicon',
-        dest='use_pos',
-        action='store_false',
-        help='Do not use word-pos dictionary in the lexicon',
-    )
-    parser.add_argument(
-        '--no_word_lexicon',
-        dest='use_word',
-        action='store_false',
-        help='Do not use word dictionary in the lexicon'
+        "--no_pos_lexicon",
+        dest="use_pos",
+        action="store_false",
+        help="Do not use word-pos dictionary in the lexicon",
     )
     parser.add_argument(
-        '--lexicon_dropout',
+        "--no_word_lexicon",
+        dest="use_word",
+        action="store_false",
+        help="Do not use word dictionary in the lexicon"
+    )
+    parser.add_argument(
+        "--lexicon_dropout",
         type=float,
         default=0.8,
-        help='Probability to drop the word from the lexicon',
+        help="Probability to drop the word from the lexicon",
     )
     parser.add_argument(
-        '--eos_after',
-        action='store_true',
-        help='Put <EOS> symbol after all the inputs. Otherwise put it after the end of token',
+        "--eos_after",
+        action="store_true",
+        help="Put <EOS> symbol after all the inputs. Otherwise put it after the end of token",
     )
-    parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
-    parser.add_argument('--alpha', type=float, default=1.0)
+    parser.add_argument("--num_edit", type=int, default=len(edit.EDIT_TO_ID))
+    parser.add_argument("--alpha", type=float, default=1.0)
 
-    parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
-    parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
-    parser.add_argument('--lr_decay', type=float, default=0.9)
-    parser.add_argument('--decay_epoch', type=int, default=30, help="Decay the lr starting from this epoch.")
-    parser.add_argument('--num_epoch', type=int, default=60)
+    parser.add_argument("--sample_train", type=float, default=1.0, help="Subsample training data.")
+    parser.add_argument("--optim", type=str, default="adam", help="sgd, adagrad, adam or adamax.")
+    parser.add_argument("--lr", type=float, default=1e-3, help='Learning rate')
+    parser.add_argument("--lr_decay", type=float, default=0.9)
+    parser.add_argument("--decay_epoch", type=int, default=30, help="Decay the lr starting from this epoch.")
+    parser.add_argument("--num_epoch", type=int, default=60)
     parser.add_argument(
-        '--early_stop',
+        "--early_stop",
         type=int,
         default=10,
         help="Stop training if dev score doesn't improve after the specified number of epochs.",
     )
     parser.add_argument(
-        '--min_epochs',
+        "--min_epochs",
         type=int,
         default=10,
         help="Minimum number of epochs to train before early stopping gets applied."
     )
-    parser.add_argument('--batch_size', type=int, default=50)
-    parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
-    parser.add_argument('--log_step', type=int, default=50, help='Print log every k steps.')
-    parser.add_argument('--model_dir', type=str, default='./saved_models/lemma', help='Root dir for saving models.')
-    parser.add_argument('--log_attn', action='store_true', help='Log attention output.')
+    parser.add_argument("--batch_size", type=int, default=50)
+    parser.add_argument("--max_grad_norm", type=float, default=5.0, help="Gradient clipping.")
+    parser.add_argument("--log_step", type=int, default=50, help="Print log every k steps.")
+    parser.add_argument("--model_dir", type=str, default="./saved_models/lemma", help="Root dir for saving models.")
+    parser.add_argument("--log_attn", action="store_true", help="Log attention output.")
 
-    parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
-    parser.add_argument('--identity_baseline', action='store_true')
-    parser.add_argument('--vabamorf_baseline', action='store_true')
+    parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--cuda", type=bool, default=torch.cuda.is_available())
+    parser.add_argument("--cpu", action="store_true", help="Ignore CUDA.")
+    parser.add_argument("--identity_baseline", action="store_true")
+    parser.add_argument("--vabamorf_baseline", action="store_true")
     args = parser.parse_args()
     return args
 
@@ -157,7 +157,7 @@ def main():
         raise RuntimeError("vb OR identity")
     logger.info("Running lemmatizer in {} mode".format(args['mode']))
 
-    if args['mode'] == 'train':
+    if args["mode"] == "train":
         train(args)
     else:
         evaluate(args)
@@ -174,22 +174,25 @@ def train(args):
         split_feats=False,
     )
     train_loader = DataLoaderVb(
-        input_src=args['train_file'], batch_size=args['batch_size'], config=config, evaluation=False
+        input_src=args["train_file"], batch_size=args["batch_size"], config=config, evaluation=False
     )
     vocab = train_loader.vocab
-    args['vocab_size'] = vocab['combined'].size
+    args["vocab_size"] = vocab["combined"].size
     dev_loader = DataLoaderVb(
-        input_src=args['eval_file'], batch_size=args['batch_size'], config=config, vocab=vocab, evaluation=True
+        input_src=args["eval_file"], batch_size=args["batch_size"], config=config, vocab=vocab, evaluation=True
     )
-    utils.ensure_dir(args['model_dir'])
-    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    utils.ensure_dir(args["model_dir"])
+    model_file = "{}/{}_lemmatizer.pt".format(args["model_dir"], args["lang"])
 
     # pred and gold path
-    system_pred_file = args['output_file']
-    gold_file = args['gold_file']
+    system_pred_file = args["output_file"]
+    gold_file = args["gold_file"]
 
     # utils.print_config(args)
 
+    logger.info("Running with the following configs:")
+    for key, value in args.items():
+        logger.info(f"{key}: {str(value)}")
 
     # skip training if the language does not have training or dev data
     if len(train_loader) == 0 or len(dev_loader) == 0:
@@ -213,18 +216,18 @@ def train(args):
     # train a seq2seq model
     logger.info("[Training seq2seq-based lemmatizer...]")
     global_step = 0
-    max_steps = len(train_loader) * args['num_epoch']
+    max_steps = len(train_loader) * args["num_epoch"]
     max_dev_steps = len(dev_loader)
     dev_score_history = []
     devs_without_improvements = 0
     best_dev_preds = []
-    current_lr = args['lr']
+    current_lr = args["lr"]
     global_start_time = time.time()
-    format_str = '{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
-    format_str_dev = '{}: step {}/{} (epoch {}/{}) ({:.3f} sec/batch)'
+    format_str = "{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}"
+    format_str_dev = "{}: step {}/{} (epoch {}/{}) ({:.3f} sec/batch)"
 
     # start training
-    for epoch in range(1, args['num_epoch'] + 1):
+    for epoch in range(1, args["num_epoch"] + 1):
         dev_step = 0
         train_loss = 0
         for i, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
@@ -232,7 +235,7 @@ def train(args):
             global_step += 1
             loss = trainer.update(batch, evaluate=False)  # update step
             train_loss += loss
-            if global_step % args['log_step'] == 0:
+            if global_step % args["log_step"] == 0:
                 duration = time.time() - start_time
                 logger.info(
                     format_str.format(
@@ -240,7 +243,7 @@ def train(args):
                         global_step,
                         max_steps,
                         epoch,
-                        args['num_epoch'],
+                        args["num_epoch"],
                         loss,
                         duration,
                         current_lr
@@ -255,7 +258,7 @@ def train(args):
             dev_step += 1
             preds, _ = trainer.predict(batch, 1)
             dev_preds += preds
-            if dev_step % args['log_step'] == 0:
+            if dev_step % args["log_step"] == 0:
                 duration = time.time() - start_time
                 logger.info(
                     format_str_dev.format(
@@ -263,7 +266,7 @@ def train(args):
                         dev_step,
                         max_dev_steps,
                         epoch,
-                        args['num_epoch'],
+                        args["num_epoch"],
                         duration
                     )
                 )
@@ -298,9 +301,8 @@ def train(args):
             break
 
         # lr schedule
-        if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1] and \
-                args['optim'] in ['sgd', 'adagrad']:
-            current_lr *= args['lr_decay']
+        if epoch > args["decay_epoch"] and dev_score <= dev_score_history[-1] and args["optim"] in ["sgd", "adagrad"]:
+            current_lr *= args["lr_decay"]
             trainer.update_lr(current_lr)
 
         dev_score_history += [dev_score]
@@ -314,20 +316,20 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    system_pred_file = args['output_file']
-    gold_file = args['gold_file']
-    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    system_pred_file = args["output_file"]
+    gold_file = args["gold_file"]
+    model_file = "{}/{}_lemmatizer.pt".format(args["model_dir"], args["lang"])
 
     # load model
-    use_cuda = args['cuda'] and not args['cpu']
+    use_cuda = args["cuda"] and not args["cpu"]
     trainer = TrainerVb(model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
+        if k.endswith("_dir") or k.endswith("_file") or k in ["shorthand"]:
             loaded_args[k] = args[k]
 
-    logger.info("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args["batch_size"]))
     config = DataLoaderVbConfig(
         morph=not loaded_args.get("no_morph", False),
         pos=not loaded_args.get("no_pos", False),
@@ -337,7 +339,7 @@ def evaluate(args):
     )
 
     dataloader = DataLoaderVb(
-        input_src=args['eval_file'], batch_size=args['batch_size'], config=config, vocab=vocab, evaluation=True
+        input_src=args["eval_file"], batch_size=args["batch_size"], config=config, vocab=vocab, evaluation=True
     )
 
     # skip eval if dev data does not exist
@@ -356,7 +358,7 @@ def evaluate(args):
         for i, batch in tqdm(
                 enumerate(dataloader), desc="Running the seq2seq model in `predict` mode...", total=len(dataloader)
         ):
-            batch_preds, _ = trainer.predict(batch, args['beam_size'], log_attn=args['log_attn'])
+            batch_preds, _ = trainer.predict(batch, args["beam_size"], log_attn=args["log_attn"])
             preds += batch_preds
         preds = trainer.postprocess(dataloader.original_tokens, preds)
 
@@ -366,7 +368,7 @@ def evaluate(args):
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         logger.info("Lemma score:")
-        logger.info("{} {:.2f}".format(args['lang'], score * 100))
+        logger.info("{} {:.2f}".format(args["lang"], score * 100))
 
 
 if __name__ == '__main__':

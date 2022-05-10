@@ -245,7 +245,7 @@ class DataLoaderVb:
             cache_dir: Optional[str] = None,
             invalidate_cache: bool = False,
             sampling_seed: Optional[int] = None,
-    ):
+    ) -> None:
         self.batch_size = batch_size
         self.config = config
         self.eval = evaluation

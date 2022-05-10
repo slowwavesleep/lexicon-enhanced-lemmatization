@@ -329,8 +329,8 @@ class Seq2SeqModelCombined(Seq2SeqModel):
 
         logger.info("Building an attentional Seq2Seq model...")
         logger.info("Using a Bi-LSTM encoder")
-        logger.info("Using a lexicon:", self.is_lexicon)
-        logger.info("Lexicon dropout:", self.lexicon_dropout)
+        logger.info(f"Using a lexicon: {self.is_lexicon}")
+        logger.info(f"Lexicon dropout: {self.lexicon_dropout}")
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
