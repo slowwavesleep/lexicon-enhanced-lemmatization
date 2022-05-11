@@ -166,8 +166,8 @@ def main():
 def train(args):
     logger.info("[Loading data with batch size {}...]".format(args['batch_size']))
     config = DataLoaderVbConfig(
-        morph=not args.get("no_morph", False),
-        pos=not args.get("no_pos", False),
+        morph=args.get("morph", True),
+        pos=args.get("pos", True),
         sample_train=args["sample_train"],
         lang="et",
         eos_after=args.get("eos_after", False),
@@ -331,10 +331,10 @@ def evaluate(args):
 
     logger.info("Loading data with batch size {}...".format(args["batch_size"]))
     config = DataLoaderVbConfig(
-        morph=not loaded_args.get("no_morph", False),
-        pos=not loaded_args.get("no_pos", False),
+        morph=trainer.args.get("morph", True),
+        pos=trainer.args.get("pos", True),
         lang="et",
-        eos_after=loaded_args.get("eos_after", False),
+        eos_after=trainer.args.get("eos_after", False),
         split_feats=False,
     )
 
