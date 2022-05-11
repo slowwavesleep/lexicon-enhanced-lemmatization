@@ -5,10 +5,15 @@ import os
 import json
 import unicodedata
 import torch
+from tqdm.auto import tqdm
+from loguru import logger
 
 from lexenlem.models.common.constant import lcode2lang
 import lexenlem.models.common.seq2seq_constant as constant
 import lexenlem.utils.conll18_ud_eval as ud_eval
+
+logger.remove()
+logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 
 
 # filenames
@@ -102,7 +107,7 @@ def keep_partial_grad(grad, topk):
 def ensure_dir(d, verbose=True):
     if not os.path.exists(d):
         if verbose:
-            print("Directory {} do not exist; creating...".format(d))
+            logger.info("Directory {} do not exist; creating...".format(d))
         os.makedirs(d)
 
 

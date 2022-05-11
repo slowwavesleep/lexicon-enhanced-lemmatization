@@ -59,7 +59,7 @@ class Trainer:
         if not self.args['dict_only']:
             if self.args.get('edit', False):
                 self.crit = loss.MixLoss(self.vocab['char'].size, self.args['alpha'])
-                print("[Running seq2seq lemmatizer with edit classifier]")
+                logger.info("[Running seq2seq lemmatizer with edit classifier]")
             else:
                 self.crit = loss.SequenceLoss(self.vocab['char'].size)
             self.parameters = [p for p in self.model.parameters() if p.requires_grad]
@@ -207,15 +207,15 @@ class Trainer:
                 }
         try:
             torch.save(params, filename)
-            print("model saved to {}".format(filename))
+            logger.info("model saved to {}".format(filename))
         except BaseException:
-            print("[Warning: Saving failed... continuing anyway.]")
+            logger.error("[Warning: Saving failed... continuing anyway.]")
 
     def load(self, filename, use_cuda=False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            print("Cannot load model from {}".format(filename))
+            logger.error("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
         self.word_dict, self.composite_dict = checkpoint['dicts']
@@ -247,7 +247,7 @@ class TrainerCombined(Trainer):
         if not self.args['dict_only']:
             if self.args.get('edit', False):
                 self.crit = loss.MixLoss(self.vocab['combined'].size, self.args['alpha'])
-                print("[Running seq2seq lemmatizer with edit classifier]")
+                logger.info("[Running seq2seq lemmatizer with edit classifier]")
             else:
                 self.crit = loss.SequenceLoss(self.vocab['combined'].size)
             self.parameters = [p for p in self.model.parameters() if p.requires_grad]
@@ -314,15 +314,15 @@ class TrainerCombined(Trainer):
                 }
         try:
             torch.save(params, filename)
-            print("model saved to {}".format(filename))
+            logger.info("model saved to {}".format(filename))
         except BaseException:
-            print("[Warning: Saving failed... continuing anyway.]")
+            logger.error("[Warning: Saving failed... continuing anyway.]")
 
     def load(self, filename: str, use_cuda: str = False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            print("Cannot load model from {}".format(filename))
+            logger.error("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
         self.word_dict, self.composite_dict = checkpoint['dicts']
@@ -416,7 +416,7 @@ class TrainerVb(Trainer):
                 'config': self.args,
                 }
         torch.save(params, filename)
-        print("model saved to {}".format(filename))
+        logger.info("model saved to {}".format(filename))
 
     def load(self, filename: str, use_cuda: str = False):
         checkpoint = torch.load(filename, lambda storage, loc: storage)
