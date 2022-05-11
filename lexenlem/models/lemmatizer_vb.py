@@ -230,25 +230,29 @@ def train(args):
     for epoch in range(1, args["num_epoch"] + 1):
         dev_step = 0
         train_loss = 0
-        for i, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
-            start_time = time.time()
-            global_step += 1
-            loss = trainer.update(batch, evaluate=False)  # update step
-            train_loss += loss
-            if global_step % args["log_step"] == 0:
-                duration = time.time() - start_time
-                logger.info(
-                    format_str.format(
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        global_step,
-                        max_steps,
-                        epoch,
-                        args["num_epoch"],
-                        loss,
-                        duration,
-                        current_lr
+        try:
+            for i, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
+                start_time = time.time()
+                global_step += 1
+                loss = trainer.update(batch, evaluate=False)  # update step
+                train_loss += loss
+                if global_step % args["log_step"] == 0:
+                    duration = time.time() - start_time
+                    logger.info(
+                        format_str.format(
+                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            global_step,
+                            max_steps,
+                            epoch,
+                            args["num_epoch"],
+                            loss,
+                            duration,
+                            current_lr
+                        )
                     )
-                )
+        except KeyboardInterrupt:
+            logger.warning("Keyboard interrupt detected. Exiting training.")
+            sys.exit(0)
 
         # eval on dev
         logger.info("Evaluating on dev set...")
