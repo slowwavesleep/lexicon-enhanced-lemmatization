@@ -254,6 +254,8 @@ class DataLoaderVb:
         self.use_vb_lemmas = use_vb_lemmas
         self.sampling_seed = sampling_seed
         # use feats and pos loaded from conll file
+        if use_conll_features:
+            logger.info("Replacing vabamorf features and POS with conll data...")
         self.use_conll_features = use_conll_features
 
         if cache_dir is None:
