@@ -320,6 +320,9 @@ class DataLoaderVb:
             self._analyzed_data: Dict[str, List[VbTokenAnalysis]] = self._analyze(list(self._parsed_data.values()))
             self._cache_analyzed_data()
 
+        if self.use_conll_features:
+            self._add_conll_to_analyzed_data()
+
         # handle vocab
         if vocab is not None:
             self.vocab = vocab
@@ -330,8 +333,6 @@ class DataLoaderVb:
             self.vocab = MultiVocab({"combined": combined_vocab})
 
         # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
-        if self.use_conll_features:
-            self._add_conll_to_analyzed_data()
         data: List[AdHocInput] = self._preprocess(self.flat_analysis, self.vocab["combined"])
 
         # shuffle for training
@@ -428,10 +429,13 @@ class DataLoaderVb:
         for token in data:
             char_data.append(f"{token.token}{token.true_lemma}")
             pos_data.append(f"POS={token.part_of_speech}")
-            if self.config.split_feats:
-                feats_data.extend(token.features.split(" "))
+            if self.use_conll_features:
+                feats_data.extend(token.features.split("|"))
             else:
-                feats_data.append(token.features)
+                if self.config.split_feats:
+                    feats_data.extend(token.features.split(" "))
+                else:
+                    feats_data.append(token.features)
         char_data = list("".join(char_data))
         combined_data = char_data + pos_data + feats_data
         combined_vocab = Vocab(combined_data, self.config.lang)
