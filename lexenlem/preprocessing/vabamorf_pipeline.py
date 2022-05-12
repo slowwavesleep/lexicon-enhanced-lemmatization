@@ -26,6 +26,8 @@ class VbTokenAnalysis:
     sent_id: Optional[str] = None
     # store model's prediction
     predicted_lemma: Optional[str] = None
+    # indicates whether conll data is used for feats and pos
+    is_conll_data: bool = False
 
     @property
     def processed_lemma_candidates(self) -> str:
@@ -172,7 +174,6 @@ class VbPipeline:
 
             # add `ma` back to verbs
             if self.restore_verb_ending and self.output_compound_separator:
-                print("bb")
                 lemma_candidates = [
                     f"{lemma_candidate}ma" if pos == "V" else lemma_candidate
                     for lemma_candidate, pos in zip(lemma_candidates, part_of_speech_candidates)

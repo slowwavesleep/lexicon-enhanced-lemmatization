@@ -245,6 +245,7 @@ class DataLoaderVb:
             cache_dir: Optional[str] = None,
             invalidate_cache: bool = False,
             sampling_seed: Optional[int] = None,
+            use_conll_features: bool = False,
     ) -> None:
         self.batch_size = batch_size
         self.config = config
@@ -252,6 +253,8 @@ class DataLoaderVb:
         self.shuffled = not self.eval
         self.use_vb_lemmas = use_vb_lemmas
         self.sampling_seed = sampling_seed
+        # use feats and pos loaded from conll file
+        self.use_conll_features = use_conll_features
 
         if cache_dir is None:
             self.cache_dir = "./cache"
@@ -320,10 +323,13 @@ class DataLoaderVb:
             self.vocab = vocab
         else:
             self.vocab = dict()
+            # !!!!!!!
             combined_vocab = self._init_vocab(self.flat_analysis)
             self.vocab = MultiVocab({"combined": combined_vocab})
 
         # keys: 'id', 'form', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
+        if self.use_conll_features:
+            self._add_conll_to_analyzed_data()
         data: List[AdHocInput] = self._preprocess(self.flat_analysis, self.vocab["combined"])
 
         # shuffle for training
@@ -429,6 +435,39 @@ class DataLoaderVb:
         combined_vocab = Vocab(combined_data, self.config.lang)
         return combined_vocab
 
+    def _add_conll_to_analyzed_data(self) -> None:
+        new_analyzed_data: List[List[VbTokenAnalysis]] = []
+        for conll_sent, vb_sent in zip(self._parsed_data.values(), self._analyzed_data.values()):
+            cur_sent: List[VbTokenAnalysis] = []
+            for conll_token, vb_token in zip(conll_sent, vb_sent):
+                new_feats: Dict[str, str] = conll_token["feats"]
+                if new_feats is None:
+                    new_feats = dict()
+                cur_sent.append(
+                    VbTokenAnalysis(
+                        index=vb_token.index,
+                        token=vb_token.token,
+                        lemma_candidates=vb_token.lemma_candidates,
+                        disambiguated_lemma=vb_token.disambiguated_lemma,
+                        candidate_parts_of_speech=vb_token.candidate_parts_of_speech,
+                        features="|".join(
+                            [f"{key}={value}" for key, value in new_feats.items()]
+                        ),
+                        part_of_speech=conll_token["upos"],
+                        true_lemma=vb_token.true_lemma,
+                        sent_id=vb_token.sent_id,
+                        predicted_lemma=vb_token.predicted_lemma,
+                        is_conll_data=True,
+                    )
+                )
+            new_analyzed_data.append(cur_sent)
+        if len(self._analyzed_data.keys()) != len(new_analyzed_data):
+            raise ValueError("Mismatch between analyzed data lengths.")
+        new_analyzed_data_dict: Dict[str, List[VbTokenAnalysis]] = dict()
+        for key, data in zip(self._analyzed_data, new_analyzed_data):
+            new_analyzed_data_dict[key] = data
+        self._analyzed_data = new_analyzed_data_dict
+
     def _preprocess(self, data: List[VbTokenAnalysis], combined_vocab) -> List[AdHocInput]:
         processed = []
         eos_after = self.config.eos_after
@@ -439,10 +478,13 @@ class DataLoaderVb:
             else:
                 surface_form = [constant.SOS] + surface_form + [constant.EOS]
             part_of_speech = ['POS=' + element.part_of_speech]
-            if self.config.split_feats:
-                raise NotImplementedError
+            if self.use_conll_features:
+                feats = element.features.split("|")
             else:
-                feats = [element.features]
+                if self.config.split_feats:
+                    raise NotImplementedError
+                else:
+                    feats = [element.features]
             if self.pos:
                 surface_form += part_of_speech
             if self.morph:
