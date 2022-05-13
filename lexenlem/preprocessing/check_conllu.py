@@ -97,25 +97,25 @@ def check_vb():
         analyzed = pipe(forms)
         for vb_analysis, lemma, form, pos in zip(analyzed, lemmas, forms, parts_of_speech):
             total += 1
-            lemma = lemma.replace("=", "").replace("_", "")
+            lemma = lemma#.replace("=", "").replace("_", "")
             if vb_analysis.disambiguated_lemma == lemma:
                 correct += 1
-            elif vb_analysis.part_of_speech == "V":
-                # print(f"Restored verb lemma: {vb_analysis.disambiguated_lemma}, UD lemma: {lemma}")
-                # if vb_analysis.disambiguated_lemma + "ma" == lemma:
-                #     correct += 1
-                #     hits.update((vb_analysis.features,))
-                # else:
-                if lemma not in set(vb_analysis.lemma_candidates):
-                    print(
-                        f"Vabamorf: {vb_analysis.disambiguated_lemma},"
-                        f" UD lemma: {lemma},"
-                        f" UD form: {form},"
-                        f" UPOS: {pos},"
-                        f" predicted feats: {vb_analysis.features},"
-                        f" lemma_candidates: {vb_analysis.lemma_candidates}"
-                        f" parts of speech: {vb_analysis.candidate_parts_of_speech}"
-                    )
+            # elif vb_analysis.part_of_speech == "V":
+            #     # print(f"Restored verb lemma: {vb_analysis.disambiguated_lemma}, UD lemma: {lemma}")
+            #     # if vb_analysis.disambiguated_lemma + "ma" == lemma:
+            #     #     correct += 1
+            #     #     hits.update((vb_analysis.features,))
+            #     # else:
+            #     if lemma not in set(vb_analysis.lemma_candidates):
+            #         print(
+            #             f"Vabamorf: {vb_analysis.disambiguated_lemma},"
+            #             f" UD lemma: {lemma},"
+            #             f" UD form: {form},"
+            #             f" UPOS: {pos},"
+            #             f" predicted feats: {vb_analysis.features},"
+            #             f" lemma_candidates: {vb_analysis.lemma_candidates}"
+            #             f" parts of speech: {vb_analysis.candidate_parts_of_speech}"
+            #         )
     # ~0.96
     return correct/total
 
