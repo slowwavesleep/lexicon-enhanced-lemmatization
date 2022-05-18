@@ -266,7 +266,7 @@ class DataLoaderVb:
                 self.generate_stanza_features = False
                 logger.info("Replacing vabamorf features and POS with conll data...")
         if self.generate_stanza_features:
-            from lexenlem.preprocessing.vabamorf_pipeline import StanzaPretokenizedAnalyzer
+            from lexenlem.preprocessing.stanza_pipeline import StanzaPretokenizedAnalyzer
             logger.info("Generating stanza features in real time...")
             self.stanza_analyzer = StanzaPretokenizedAnalyzer()
         else:
