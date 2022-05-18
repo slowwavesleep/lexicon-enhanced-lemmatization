@@ -267,9 +267,11 @@ class DataLoaderVb:
                 logger.info("Replacing vabamorf features and POS with conll data...")
         if self.generate_stanza_features:
             raise NotImplementedError
-            from lexenlem.preprocessing.stanza_pipeline import StanzaPretokenizedAnalyzer
-            logger.info("Generating stanza features in real time...")
-            self.stanza_analyzer = StanzaPretokenizedAnalyzer()
+            # from lexenlem.preprocessing.stanza_pipeline import StanzaPretokenizedAnalyzer
+            # import stanza
+            # stanza.download("et")
+            # logger.info("Generating stanza features in real time...")
+            # self.stanza_analyzer = StanzaPretokenizedAnalyzer()
         else:
             self.stanza_analyzer = None
 

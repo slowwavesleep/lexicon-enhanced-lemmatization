@@ -9,7 +9,7 @@ from lexenlem.preprocessing.vabamorf_pipeline import VbTokenAnalysis
 class StanzaPretokenizedAnalyzer:
 
     def __init__(self):
-
+        stanza.download("et")
         self.nlp = stanza.Pipeline(
             lang="et", processors="tokenize,pos", tokenize_pretokenized=True, pos_batch_size=256, verbose=False
         )
