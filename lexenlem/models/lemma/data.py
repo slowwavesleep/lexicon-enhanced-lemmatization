@@ -267,6 +267,7 @@ class DataLoaderVb:
         if not config:
             self.config = DataLoaderVbConfig()
 
+        # TODO: needs to pass parameters from entry point
         self.analyzer = VbPipeline(
             use_context=True,
             use_proper_name_analysis=True,
@@ -328,7 +329,6 @@ class DataLoaderVb:
             self.vocab = vocab
         else:
             self.vocab = dict()
-            # !!!!!!!
             combined_vocab = self._init_vocab(self.flat_analysis)
             self.vocab = MultiVocab({"combined": combined_vocab})
 

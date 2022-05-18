@@ -1,4 +1,3 @@
-# TODO: add source here
 # adapted from https://github.com/estnltk/neuromorph-training/blob/master/vabamorf_2_neural.py
 
 # {vabamorf form tag : neural tag}
