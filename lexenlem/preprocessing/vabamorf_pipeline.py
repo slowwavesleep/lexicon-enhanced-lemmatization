@@ -1,9 +1,11 @@
+import dataclasses
 from dataclasses import dataclass
-from typing import List, Union, Dict, Tuple, Optional
+from typing import List, Union, Tuple, Optional
 
 import torch
 from estnltk import Text
 from estnltk.taggers import VabamorfTagger, WhiteSpaceTokensTagger, PretokenizedTextCompoundTokensTagger
+import stanza
 
 from lexenlem.models.common import seq2seq_constant as constant
 from lexenlem.models.common.data import sort_all, get_long_tensor
@@ -377,14 +379,60 @@ class VabamorfAdHocProcessor:
         output_seqs = ["".join(seq) for seq in output_seqs]
         output_seqs = unsort(output_seqs, pt_batch.orig_idx)
 
-        if self.use_dict and self.use_pos:
-            tmp = []
-            d_lemmatized = self.lemmatize_dict(preprocessed)
-            for d_lemma, hypothesis in zip(d_lemmatized, output_seqs):
-                if not d_lemma:
-                    tmp.append(hypothesis)
-                else:
-                    tmp.append(d_lemma)
-            output_seqs = tmp
+        # if self.use_dict and self.use_pos:
+        #     tmp = []
+        #     d_lemmatized = self.lemmatize_dict(preprocessed)
+        #     for d_lemma, hypothesis in zip(d_lemmatized, output_seqs):
+        #         if not d_lemma:
+        #             tmp.append(hypothesis)
+        #         else:
+        #             tmp.append(d_lemma)
+        #     output_seqs = tmp
 
         return output_seqs
+
+
+class StanzaPretokenizedAnalyzer:
+
+    def __init__(self):
+        self.nlp = stanza.Pipeline(lang="et", processors="tokenize,pos", tokenize_pretokenized=True)
+
+    def _analyze(self, tokens: Union[List[List[str]], List[str]]) -> stanza.Document:
+        processed = self.nlp(tokens)
+        return processed
+
+    def __call__(self, token_analyses: List[List[VbTokenAnalysis]]) -> List[List[VbTokenAnalysis]]:
+
+        if not token_analyses:
+            raise RuntimeError("Passed an empty list")
+
+        if len(token_analyses) == 1:
+            tokens_to_analyze: List[str] = [el.token for el in token_analyses[0]]
+        else:
+            tokens_to_analyze: List[List[str]] = []
+            for sentence in token_analyses:
+                tokens_to_analyze.append([el.token for el in sentence])
+
+        processed = self._analyze(tokens_to_analyze)
+
+        if len(token_analyses) != len(processed.sentences):
+            raise RuntimeError("Lengths mismatch")
+
+        reanalyzed_tokens: List[List[VbTokenAnalysis]] = []
+
+        for vb_sentence, stanza_sentence in zip(token_analyses, processed.sentences):
+            cur_sentence: List[VbTokenAnalysis] = []
+            for vb_token, stanza_token in zip(vb_sentence, stanza_sentence):
+                cur_sentence.append(
+                    dataclasses.replace(
+                        vb_token,
+                        part_of_speech=stanza_token.words[0].upos,
+                        features=stanza_token.words[0].feats
+                    )
+                )
+            reanalyzed_tokens.append(cur_sentence)
+
+        if len(token_analyses) != len(reanalyzed_tokens):
+            raise RuntimeError("Lengths mismatch")
+
+        return reanalyzed_tokens
