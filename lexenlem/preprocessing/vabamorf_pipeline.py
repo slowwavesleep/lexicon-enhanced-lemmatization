@@ -395,7 +395,7 @@ class VabamorfAdHocProcessor:
 class StanzaPretokenizedAnalyzer:
 
     def __init__(self):
-        self.nlp = stanza.Pipeline(lang="et", processors="tokenize,pos", tokenize_pretokenized=True)
+        self.nlp = stanza.Pipeline(lang="et", processors="tokenize,pos", tokenize_pretokenized=True, verbose=True)
 
     def _analyze(self, tokens: Union[List[List[str]], List[str]]) -> stanza.Document:
         processed = self.nlp(tokens)

@@ -459,8 +459,7 @@ class DataLoaderVb:
         return combined_vocab
 
     def _add_stanza_to_analyzed_data(self):
-        new_analyzed_data: List[List[VbTokenAnalysis]] = deepcopy(self._analyzed_data.values())
-        new_analyzed_data: List[List[VbTokenAnalysis]] = self.stanza_analyzer(new_analyzed_data)
+        new_analyzed_data: List[List[VbTokenAnalysis]] = self.stanza_analyzer(self._analyzed_data.values())
         new_analyzed_data_dict: Dict[str, List[VbTokenAnalysis]] = dict()
         for key, data in zip(self._analyzed_data, new_analyzed_data):
             new_analyzed_data_dict[key] = data
