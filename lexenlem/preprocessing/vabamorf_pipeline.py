@@ -6,17 +6,12 @@ import torch
 from estnltk import Text
 from estnltk.taggers import VabamorfTagger, WhiteSpaceTokensTagger, PretokenizedTextCompoundTokensTagger
 import stanza
-from loguru import logger
-from tqdm.auto import tqdm
 
 from lexenlem.models.common import seq2seq_constant as constant
 from lexenlem.models.common.data import sort_all, get_long_tensor
 from lexenlem.models.common.seq2seq_model import Seq2SeqModelCombined
 from lexenlem.models.common.utils import prune_decoded_seqs, unsort
 from lexenlem.models.lemma.vocab import Vocab, MultiVocab
-
-logger.remove()
-logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 
 
 @dataclass
@@ -402,13 +397,11 @@ class StanzaPretokenizedAnalyzer:
     def __init__(self):
 
         self.nlp = stanza.Pipeline(
-            lang="et", processors="tokenize,pos", tokenize_pretokenized=True, pos_batch_size=256
+            lang="et", processors="tokenize,pos", tokenize_pretokenized=True, pos_batch_size=256, verbose=False
         )
 
     def _analyze(self, tokens: Union[List[List[str]], List[str]]) -> stanza.Document:
-        logger.info("Stanza processing...")
         processed = self.nlp(tokens)
-        logger.info("Finished Stanza processing...")
         return processed
 
     def __call__(self, token_analyses: List[List[VbTokenAnalysis]]) -> List[List[VbTokenAnalysis]]:
@@ -432,12 +425,12 @@ class StanzaPretokenizedAnalyzer:
 
         for vb_sentence, stanza_sentence in zip(token_analyses, processed.sentences):
             cur_sentence: List[VbTokenAnalysis] = []
-            for vb_token, stanza_token in zip(vb_sentence, stanza_sentence):
+            for vb_token, stanza_token in zip(vb_sentence, stanza_sentence.words):
                 cur_sentence.append(
                     dataclasses.replace(
                         vb_token,
-                        part_of_speech=stanza_token.words[0].upos,
-                        features=stanza_token.words[0].feats
+                        part_of_speech=stanza_token.upos,
+                        features=stanza_token.feats
                     )
                 )
             reanalyzed_tokens.append(cur_sentence)
