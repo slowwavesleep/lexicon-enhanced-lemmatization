@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Union, List
+from typing import List
 
 import stanza
 
@@ -36,20 +36,5 @@ class StanzaPretokenizedAnalyzer:
                     features=st_token.words[0].feats,
                 )
             )
-
-        # for vb_sentence, stanza_sentence in zip(token_analyses, processed.sentences):
-        #     cur_sentence: List[VbTokenAnalysis] = []
-        #     for vb_token, stanza_token in zip(vb_sentence, stanza_sentence.words):
-        #         cur_sentence.append(
-        #             dataclasses.replace(
-        #                 vb_token,
-        #                 part_of_speech=stanza_token.upos,
-        #                 features=stanza_token.feats
-        #             )
-        #         )
-        #     reanalyzed_tokens.append(cur_sentence)
-        #
-        # if len(token_analyses) != len(reanalyzed_tokens):
-        #     raise RuntimeError("Lengths mismatch")
 
         return reanalyzed_tokens
