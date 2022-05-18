@@ -136,6 +136,7 @@ def parse_args():
     parser.add_argument("--identity_baseline", action="store_true")
     parser.add_argument("--vabamorf_baseline", action="store_true")
     parser.add_argument("--use_conll_features", action="store_true")
+    parser.add_argument("--generate_stanza_features", action="store_true")
     args = parser.parse_args()
     return args
 
@@ -181,6 +182,7 @@ def train(args):
         config=config,
         evaluation=False,
         use_conll_features=args.get("use_conll_features", False),
+        generate_stanza_features=args.get("generate_stanza_features", False),
     )
     vocab = train_loader.vocab
     args["vocab_size"] = vocab["combined"].size
@@ -191,6 +193,7 @@ def train(args):
         vocab=vocab,
         evaluation=True,
         use_conll_features=args.get("use_conll_features", False),
+        generate_stanza_features=args.get("generate_stanza_features", False),
     )
     utils.ensure_dir(args["model_dir"])
     model_file = "{}/{}_lemmatizer.pt".format(args["model_dir"], args["lang"])
@@ -360,6 +363,7 @@ def evaluate(args):
         vocab=vocab,
         evaluation=True,
         use_conll_features=trainer.args.get("use_conll_features", False),
+        generate_stanza_features=args.get("generate_stanza_features", False),
     )
 
     # skip eval if dev data does not exist
