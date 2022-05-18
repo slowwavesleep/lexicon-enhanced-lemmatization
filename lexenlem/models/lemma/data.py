@@ -246,6 +246,7 @@ class DataLoaderVb:
             invalidate_cache: bool = False,
             sampling_seed: Optional[int] = None,
             use_conll_features: bool = False,
+            generate_stanza_features: bool = False,
     ) -> None:
         self.batch_size = batch_size
         self.config = config
@@ -254,9 +255,22 @@ class DataLoaderVb:
         self.use_vb_lemmas = use_vb_lemmas
         self.sampling_seed = sampling_seed
         # use feats and pos loaded from conll file
-        if use_conll_features:
-            logger.info("Replacing vabamorf features and POS with conll data...")
+
         self.use_conll_features = use_conll_features
+        self.generate_stanza_features = generate_stanza_features
+        if self.use_conll_features:
+            if not self.generate_stanza_features:
+                logger.info("Replacing vabamorf features and POS with conll data...")
+            else:
+                logger.info("Overriding `generate_stanza_features` with `use_conll_features`: not possible to use both")
+                self.generate_stanza_features = False
+                logger.info("Replacing vabamorf features and POS with conll data...")
+        if self.generate_stanza_features:
+            from lexenlem.preprocessing.vabamorf_pipeline import StanzaPretokenizedAnalyzer
+            logger.info("Generating stanza features in real time...")
+            self.stanza_analyzer = StanzaPretokenizedAnalyzer()
+        else:
+            self.stanza_analyzer = None
 
         if cache_dir is None:
             self.cache_dir = "./cache"
@@ -278,8 +292,8 @@ class DataLoaderVb:
         )
         self.morph = self.config.morph
         self.pos = self.config.pos
-        logger.info(f"Using Vabamorf morphological features: {self.morph}")
-        logger.info(f"Using Vabamorf determined parts of speech: {self.pos}")
+        logger.info(f"Using morphological features: {self.morph}")
+        logger.info(f"Using parts of speech: {self.pos}")
 
         if isinstance(input_src, str):
             assert input_src.endswith("conllu"), "Loaded file must be conllu file."
@@ -323,6 +337,9 @@ class DataLoaderVb:
 
         if self.use_conll_features:
             self._add_conll_to_analyzed_data()
+
+        if self.generate_stanza_features:
+            self._add_stanza_to_analyzed_data()
 
         # handle vocab
         if vocab is not None:
@@ -440,6 +457,14 @@ class DataLoaderVb:
         combined_data = char_data + pos_data + feats_data
         combined_vocab = Vocab(combined_data, self.config.lang)
         return combined_vocab
+
+    def _add_stanza_to_analyzed_data(self):
+        new_analyzed_data: List[List[VbTokenAnalysis]] = deepcopy(self._analyzed_data.values())
+        new_analyzed_data: List[List[VbTokenAnalysis]] = self.stanza_analyzer(new_analyzed_data)
+        new_analyzed_data_dict: Dict[str, List[VbTokenAnalysis]] = dict()
+        for key, data in zip(self._analyzed_data, new_analyzed_data):
+            new_analyzed_data_dict[key] = data
+        self._analyzed_data = new_analyzed_data_dict
 
     def _add_conll_to_analyzed_data(self) -> None:
         new_analyzed_data: List[List[VbTokenAnalysis]] = []
