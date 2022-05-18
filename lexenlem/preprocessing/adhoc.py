@@ -55,7 +55,7 @@ class AdHocLemmatizer:
         self.config = checkpoint["config"]
         self.word_dict, self.composite_dict = checkpoint["dicts"]
         self.vocab: Vocab = MultiVocab.load_state_dict(checkpoint["vocab"])["combined"]
-        self.lexicon = checkpoint["lexicon"]
+        self.lexicon = checkpoint.get("lexicon", None)
         if self.config["dict_only"]:
             raise NotImplementedError
         self.model = Seq2SeqModelCombined(self.config, self.vocab, use_cuda=self.use_cuda)
