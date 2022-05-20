@@ -22,16 +22,6 @@ from lexenlem.models.lemma import scorer, edit
 from lexenlem.models.common import utils
 
 
-# TODO:
-# 0. Update evaluate +
-# 1. Add keyboard interrupt +
-# 2. Add TQDM +
-# 3. Add logging +
-# 4. Add config class
-# 5. Cache vabamorf analysis (hash input conll -> save processed to cache in json lines format) +
-# 6. Add increased from to
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default="./data/lemma", help="Directory for all lemma data.")
