@@ -3,8 +3,8 @@ from setuptools import setup, find_packages
 setup(
     name="lexenlem",
     version="0.0.1",
-    package_dir={"": "lexenlem"},
-    packages=find_packages(where="lexenlem"),
+    # package_dir={"": "lexenlem"},
+    packages=find_packages(),
     python_requires=">=3.6",
     include_package_data=True,
     install_requires=[
