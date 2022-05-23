@@ -45,7 +45,17 @@ class AdHocLemmatizer:
         self.use_pos = self.config["use_pos"]
         self.eos_after = self.config["eos_after"]
 
-        self.analyzer = VbPipeline()
+        # TODO parametrize this more
+        self.analyzer = VbPipeline(
+            use_context=True,
+            use_proper_name_analysis=True,
+            output_compound_separator=self.allow_compound_separator,
+            guess_unknown_words=True,
+            output_phonetic_info=True,
+            restore_verb_ending=True,
+            ignore_derivation_symbol=not self.allow_derivation_sign,
+
+        )
 
     def __call__(self, raw_text: str) -> List[str]:
         return self.lemmatize(raw_text)
@@ -99,7 +109,7 @@ class AdHocLemmatizer:
             output_seqs = [el.replace("=", "") for el in output_seqs]
 
         if not self.allow_compound_separator:
-            output_seqs = [el.replace("=", "") for el in output_seqs]
+            output_seqs = [el.replace("_", "") for el in output_seqs]
 
         return output_seqs
 
