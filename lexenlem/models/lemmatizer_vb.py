@@ -127,6 +127,12 @@ def parse_args():
     parser.add_argument("--vabamorf_baseline", action="store_true")
     parser.add_argument("--use_conll_features", action="store_true")
     parser.add_argument("--generate_stanza_features", action="store_true")
+    parser.add_argument("--no_vb_context", action="store_true")
+    parser.add_argument("--no_proper", action="store_true")
+    parser.add_argument("--output_compound_separator", action="store_true")
+    parser.add_argument("--no_guess_unknown_words", action="store_true")
+    parser.add_argument("output_phonetic_info", action="store_true")
+    parser.add_argument("--no_ignore_derivation_symbol", action="store_true")
     args = parser.parse_args()
     return args
 
@@ -165,6 +171,12 @@ def train(args):
         lang="et",
         eos_after=args.get("eos_after", False),
         split_feats=False,
+        use_context=not args.get("no_vb_context", False),
+        use_proper_name_analysis=not args.get("no_proper", False),
+        output_compound_separator=args.get("output_compound_separator", False),
+        guess_unknown_words=not args.get("no_guess_unknown_words", False),
+        output_phonetic_info=args.get("output_phonetic_info", False),
+        ignore_derivation_symbol=args.get("no_ignore_derivation_symbol", False),
     )
     train_loader = DataLoaderVb(
         input_src=args["train_file"],
@@ -344,6 +356,12 @@ def evaluate(args):
         lang="et",
         eos_after=trainer.args.get("eos_after", False),
         split_feats=False,
+        use_context=not trainer.args.get("no_vb_context", False),
+        use_proper_name_analysis=not trainer.args.get("no_proper", False),
+        output_compound_separator=trainer.args.get("output_compound_separator", False),
+        guess_unknown_words=not trainer.args.get("no_guess_unknown_words", False),
+        output_phonetic_info=trainer.args.get("output_phonetic_info", False),
+        ignore_derivation_symbol=trainer.args.get("no_ignore_derivation_symbol", False),
     )
 
     dataloader = DataLoaderVb(

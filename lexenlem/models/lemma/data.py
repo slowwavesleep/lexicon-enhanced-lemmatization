@@ -230,6 +230,12 @@ class DataLoaderVbConfig:
     lang: str = "et"
     eos_after: bool = False
     split_feats: bool = False
+    use_context: bool = True
+    use_proper_name_analysis: bool = True
+    output_compound_separator: bool = False
+    guess_unknown_words: bool = True
+    output_phonetic_info: bool = False
+    ignore_derivation_symbol: bool = True
 
 
 class DataLoaderVb:
@@ -286,12 +292,12 @@ class DataLoaderVb:
 
         # TODO: needs to pass parameters from entry point
         self.analyzer = VbPipeline(
-            use_context=True,
-            use_proper_name_analysis=True,
-            output_compound_separator=False,
-            guess_unknown_words=True,
-            output_phonetic_info=False,
-            ignore_derivation_symbol=True,
+            use_context=self.config.use_context,
+            use_proper_name_analysis=self.config.use_proper_name_analysis,
+            output_compound_separator=self.config.output_compound_separator,
+            guess_unknown_words=self.config.guess_unknown_words,
+            output_phonetic_info=self.config.output_phonetic_info,
+            ignore_derivation_symbol=self.config.ignore_derivation_symbol,
         )
         self.morph = self.config.morph
         self.pos = self.config.pos
