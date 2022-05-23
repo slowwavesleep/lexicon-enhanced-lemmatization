@@ -374,7 +374,10 @@ class DataLoaderVb:
         self.data = data
 
     def _hash_parsed_data(self) -> str:
-        serialized = "".join([sentence.serialize() for _, sentence in self._parsed_data.items()])
+        config_str = f"{int(self.config.use_context)}{int(self.config.use_proper_name_analysis)}" \
+                     f"{int(self.config.output_compound_separator)}{int(self.config.guess_unknown_words)}" \
+                     f"{int(self.config.output_phonetic_info)}{int(self.config.ignore_derivation_symbol)}"
+        serialized = config_str + "\n" + "".join([sentence.serialize() for _, sentence in self._parsed_data.items()])
         return md5(serialized.encode("utf-8")).hexdigest()
 
     def _serialize_analyzed_data(self) -> str:
