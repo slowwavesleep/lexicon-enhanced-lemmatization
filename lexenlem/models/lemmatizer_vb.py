@@ -131,7 +131,7 @@ def parse_args():
     parser.add_argument("--no_proper", action="store_true")
     parser.add_argument("--output_compound_separator", action="store_true")
     parser.add_argument("--no_guess_unknown_words", action="store_true")
-    parser.add_argument("output_phonetic_info", action="store_true")
+    parser.add_argument("--output_phonetic_info", action="store_true")
     parser.add_argument("--no_ignore_derivation_symbol", action="store_true")
     args = parser.parse_args()
     return args
