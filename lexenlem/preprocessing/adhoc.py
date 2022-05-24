@@ -51,7 +51,7 @@ class AdHocLemmatizer:
             use_proper_name_analysis=True,
             output_compound_separator=self.allow_compound_separator,
             guess_unknown_words=True,
-            output_phonetic_info=True,
+            output_phonetic_info=False,
             restore_verb_ending=True,
             ignore_derivation_symbol=not self.allow_derivation_sign,
 
