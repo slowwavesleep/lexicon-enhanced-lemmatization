@@ -176,7 +176,7 @@ def train(args):
         output_compound_separator=args.get("output_compound_separator", False),
         guess_unknown_words=not args.get("no_guess_unknown_words", False),
         output_phonetic_info=args.get("output_phonetic_info", False),
-        ignore_derivation_symbol=args.get("no_ignore_derivation_symbol", False),
+        ignore_derivation_symbol=not args.get("no_ignore_derivation_symbol", False),
     )
     train_loader = DataLoaderVb(
         input_src=args["train_file"],
@@ -361,7 +361,7 @@ def evaluate(args):
         output_compound_separator=trainer.args.get("output_compound_separator", False),
         guess_unknown_words=not trainer.args.get("no_guess_unknown_words", False),
         output_phonetic_info=trainer.args.get("output_phonetic_info", False),
-        ignore_derivation_symbol=trainer.args.get("no_ignore_derivation_symbol", False),
+        ignore_derivation_symbol=not trainer.args.get("no_ignore_derivation_symbol", False),
     )
 
     dataloader = DataLoaderVb(
