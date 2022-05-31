@@ -290,7 +290,6 @@ class DataLoaderVb:
         if not config:
             self.config = DataLoaderVbConfig()
 
-        # TODO: needs to pass parameters from entry point
         self.analyzer = VbPipeline(
             use_context=self.config.use_context,
             use_proper_name_analysis=self.config.use_proper_name_analysis,

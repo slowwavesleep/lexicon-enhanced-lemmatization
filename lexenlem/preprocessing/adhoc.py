@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List
 
 import torch
 
@@ -15,14 +15,23 @@ class AdHocLemmatizer:
     def __init__(
             self,
             path: str,
+            *,
             use_feats: bool = True,
             skip_lemma: bool = False,
             use_cuda: bool = False,
             allow_compound_separator: bool = False,
             allow_derivation_sign: bool = False,
             use_stanza: bool = False,
+            restore_verb_ending: bool = True,
+            use_context: bool = True,
+            guess_unknown_words: bool = True,
+            use_proper_name_analysis: bool = True,
     ):
+        self.use_context = use_context
+        self.use_proper_name_analysis = use_proper_name_analysis
         self.allow_compound_separator = allow_compound_separator
+        self.guess_unknown_words = guess_unknown_words
+        self.restore_verb_ending = restore_verb_ending
         self.allow_derivation_sign = allow_derivation_sign
         self.use_feats = use_feats
         self.skip_lemma = skip_lemma
@@ -45,14 +54,13 @@ class AdHocLemmatizer:
         self.use_pos = self.config["use_pos"]
         self.eos_after = self.config["eos_after"]
 
-        # TODO parametrize this more
         self.analyzer = VbPipeline(
-            use_context=True,
-            use_proper_name_analysis=True,
+            use_context=self.use_context,
+            use_proper_name_analysis=self.use_proper_name_analysis,
             output_compound_separator=self.allow_compound_separator,
-            guess_unknown_words=True,
-            output_phonetic_info=False,
-            restore_verb_ending=True,
+            guess_unknown_words=self.guess_unknown_words,
+            output_phonetic_info=False,  # setting to True breaks the pipeline
+            restore_verb_ending=self.restore_verb_ending,
             ignore_derivation_symbol=not self.allow_derivation_sign,
 
         )
