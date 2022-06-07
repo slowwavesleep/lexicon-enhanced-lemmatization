@@ -129,7 +129,21 @@ class VbPipeline:
             # number of tokens must be the same in both analyses
             if len(disambiguated_analysis["morph_analysis"]) != len(ambiguous_analysis["morph_analysis"]):
                 raise ValueError("Number of tokens mismatch")
-        elif isinstance(input_text, list) and all((isinstance(el, str) and " " not in el for el in input_text)):
+        elif isinstance(input_text, list):
+            if not all((isinstance(el, str) and " " not in el for el in input_text)):
+                tmp_input = []
+                for el in input_text:
+                    if " " in el:
+                        if el.replace(" ", "").isdigit():
+                            tmp_input.append(el.replace(" ", ""))
+                        else:
+                            raise ValueError(
+                                "Input text should may be raw `str` or pretokenized `List[str]` with no whitespaces "
+                                "in each token "
+                            )
+                    else:
+                        tmp_input.append(el)
+                input_text = tmp_input
             ambiguous_analysis = self._ambiguous_pretokenized_analysis(input_text)
             disambiguated_analysis = self._disambiguated_pretokenized_analysis(input_text)
             # number of tokens must be the same in both analyses and match the number of original tokens
@@ -158,7 +172,7 @@ class VbPipeline:
         for index, (
                 token, disambiguated_lemma, lemma_candidates, features, part_of_speech, part_of_speech_candidates
         ) in enumerate(
-                zip(tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list, ambiguous_pos_list)
+            zip(tokens, disambiguated_lemmas, lemma_candidate_list, features_list, pos_list, ambiguous_pos_list)
         ):
             disambiguated_lemma: str = disambiguated_lemma[0]
             if self.ignore_derivation_symbol:
@@ -218,5 +232,3 @@ class VbPipeline:
         text.tag_layer(self._amb_morph_tagger.input_layers)
         self._disamb_morph_tagger.tag(text)
         return text
-
-
