@@ -133,6 +133,7 @@ def parse_args():
     parser.add_argument("--no_guess_unknown_words", action="store_true")
     parser.add_argument("--output_phonetic_info", action="store_true")
     parser.add_argument("--no_ignore_derivation_symbol", action="store_true")
+    parser.add_argument("--eval_model_path", type=str)
     args = parser.parse_args()
     return args
 
@@ -338,7 +339,10 @@ def evaluate(args):
     # file paths
     system_pred_file = args["output_file"]
     gold_file = args["gold_file"]
-    model_file = "{}/{}_lemmatizer.pt".format(args["model_dir"], args["lang"])
+    if args.get("eval_model_path"):
+        model_file = args["eval_model_path"]
+    else:
+        model_file = "{}/{}_lemmatizer.pt".format(args["model_dir"], args["lang"])
 
     # load model
     use_cuda = args["cuda"] and not args["cpu"]
@@ -350,6 +354,12 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     logger.info("Loading data with batch size {}...".format(args["batch_size"]))
+    if args["identity_baseline"] or args["vabamorf_baseline"]:
+        output_compound_separator = args.get("output_compound_separator", False)
+        ignore_derivation_symbol = not args.get("no_ignore_derivation_symbol", False)
+    else:
+        output_compound_separator = trainer.args.get("output_compound_separator", False)
+        ignore_derivation_symbol = not trainer.args.get("no_ignore_derivation_symbol", False)
     config = DataLoaderVbConfig(
         morph=trainer.args.get("morph", True),
         pos=trainer.args.get("pos", True),
@@ -358,10 +368,10 @@ def evaluate(args):
         split_feats=False,
         use_context=not trainer.args.get("no_vb_context", False),
         use_proper_name_analysis=not trainer.args.get("no_proper", False),
-        output_compound_separator=trainer.args.get("output_compound_separator", False),
+        output_compound_separator=output_compound_separator,
         guess_unknown_words=not trainer.args.get("no_guess_unknown_words", False),
         output_phonetic_info=trainer.args.get("output_phonetic_info", False),
-        ignore_derivation_symbol=not trainer.args.get("no_ignore_derivation_symbol", False),
+        ignore_derivation_symbol=ignore_derivation_symbol,
     )
 
     dataloader = DataLoaderVb(
