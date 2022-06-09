@@ -2,28 +2,32 @@
 The full encoder-decoder model, built on top of the base seq2seq modules.
 """
 
+import json
+
 import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
+from loguru import logger
+from tqdm.auto import tqdm
 
 import lexenlem.models.common.seq2seq_constant as constant
 from lexenlem.models.common import utils
 from lexenlem.models.common.seq2seq_modules import LSTMAttention, LSTMDoubleAttention
 from lexenlem.models.common.beam import Beam
 
-import json
 
 class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.
     """
+
     def __init__(self, args, vocab, emb_matrix=None, use_cuda=False):
         super().__init__()
         self.vocab_size = args['vocab_size']
         self.emb_dim = args['emb_dim']
         self.hidden_dim = args['hidden_dim']
-        self.nlayers = args['num_layers'] # encoder layers, decoder layers = 1
+        self.nlayers = args['num_layers']  # encoder layers, decoder layers = 1
         self.emb_dropout = args.get('emb_dropout', 0.0)
         self.dropout = args['dropout']
         self.pad_token = constant.PAD_ID
@@ -34,8 +38,8 @@ class Seq2SeqModel(nn.Module):
         self.emb_matrix = emb_matrix
         self.vocab = vocab
 
-        print("Building an attentional Seq2Seq model...")
-        print("Using a Bi-LSTM encoder")
+        logger.info("Building an attentional Seq2Seq model...")
+        logger.info("Using a Bi-LSTM encoder")
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
@@ -57,31 +61,38 @@ class Seq2SeqModel(nn.Module):
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
         self.embedding = nn.Embedding(self.vocab_size, self.emb_dim, self.pad_token)
-        self.encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
-                bidirectional=True, batch_first=True, dropout=self.dropout if self.nlayers > 1 else 0)
-        self.decoder = LSTMAttention(self.emb_dim, self.dec_hidden_dim, \
-                batch_first=True, attn_type=self.args['attn_type'])
+        self.encoder = nn.LSTM(
+            self.emb_dim,
+            self.enc_hidden_dim,
+            self.nlayers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=self.dropout if self.nlayers > 1 else 0
+        )
+        self.decoder = LSTMAttention(
+            self.emb_dim, self.dec_hidden_dim, batch_first=True, attn_type=self.args['attn_type']
+        )
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
         if self.use_pos and self.pos_dim > 0:
-            print("Using POS in encoder")
+            logger.info("Using POS in encoder")
             if self.pos_first:
-                print("Putting POS before source in the encoder")
+                logger.info("Putting POS before source in the encoder")
             self.pos_embedding = nn.Embedding(self.pos_vocab_size, self.pos_dim, self.pad_token)
             self.pos_drop = nn.Dropout(self.pos_dropout)
         if self.use_feats and self.pos_dim > 0:
-            print("Using FEATS in encoder")
+            logger.info("Using FEATS in encoder")
             self.feats_embedding = nn.ModuleList()
             for l in self.vocab['feats'].lens():
                 self.feats_embedding.append(nn.Embedding(l, self.pos_dim, self.pad_token))
             self.feats_drop = nn.Dropout(self.pos_dropout)
         if self.use_vabamorf:
-            print("Using Vabamorf lemmas in the encoder")
+            logger.info("Using Vabamorf lemmas in the encoder")
         if self.edit:
-            edit_hidden = self.hidden_dim//2
+            edit_hidden = self.hidden_dim // 2
             self.edit_clf = nn.Sequential(
-                    nn.Linear(self.hidden_dim, edit_hidden),
-                    nn.ReLU(),
-                    nn.Linear(edit_hidden, self.num_edit))
+                nn.Linear(self.hidden_dim, edit_hidden),
+                nn.ReLU(),
+                nn.Linear(edit_hidden, self.num_edit))
 
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
         self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
@@ -95,19 +106,19 @@ class Seq2SeqModel(nn.Module):
             if isinstance(self.emb_matrix, np.ndarray):
                 self.emb_matrix = torch.from_numpy(self.emb_matrix)
             assert self.emb_matrix.size() == (self.vocab_size, self.emb_dim), \
-                    "Input embedding matrix must match size: {} x {}".format(self.vocab_size, self.emb_dim)
+                "Input embedding matrix must match size: {} x {}".format(self.vocab_size, self.emb_dim)
             self.embedding.weight.data.copy_(self.emb_matrix)
         else:
             self.embedding.weight.data.uniform_(-init_range, init_range)
         # decide finetuning
         if self.top <= 0:
-            print("Do not finetune embedding layer.")
+            logger.info("Do not finetune embedding layer.")
             self.embedding.weight.requires_grad = False
         elif self.top < self.vocab_size:
-            print("Finetune top {} embeddings.".format(self.top))
+            logger.info("Finetune top {} embeddings.".format(self.top))
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
-            print("Finetune all embeddings.")
+            logger.info("Finetune all embeddings.")
         # initialize pos embeddings
         if self.use_pos:
             self.pos_embedding.weight.data.uniform_(-init_range, init_range)
@@ -125,8 +136,8 @@ class Seq2SeqModel(nn.Module):
 
     def zero_state(self, inputs):
         batch_size = inputs.size(0)
-        h0 = torch.zeros(self.encoder.num_layers*2, batch_size, self.enc_hidden_dim, requires_grad=False)
-        c0 = torch.zeros(self.encoder.num_layers*2, batch_size, self.enc_hidden_dim, requires_grad=False)
+        h0 = torch.zeros(self.encoder.num_layers * 2, batch_size, self.enc_hidden_dim, requires_grad=False)
+        c0 = torch.zeros(self.encoder.num_layers * 2, batch_size, self.enc_hidden_dim, requires_grad=False)
         if self.use_cuda:
             return h0.cuda(), c0.cuda()
         return h0, c0
@@ -135,13 +146,13 @@ class Seq2SeqModel(nn.Module):
         """ Encode source sequence. """
         self.h0, self.c0 = self.zero_state(enc_inputs)
 
-        #print('h0, c0:', self.h0.size(), self.c0.size())
+        # print('h0, c0:', self.h0.size(), self.c0.size())
 
         packed_inputs = nn.utils.rnn.pack_padded_sequence(enc_inputs, lens, batch_first=True)
         packed_h_in, (hn, cn) = self.encoder(packed_inputs, (self.h0, self.c0))
         h_in, _ = nn.utils.rnn.pad_packed_sequence(packed_h_in, batch_first=True)
-        #print('hn, cn (original):', hn.size(), cn.size())
-        #print('hn[-1], hn[-2]:', hn[-1].size(), hn[-2].size())
+        # print('hn, cn (original):', hn.size(), cn.size())
+        # print('hn[-1], hn[-2]:', hn[-1].size(), hn[-2].size())
         hn = torch.cat((hn[-1], hn[-2]), 1)
         cn = torch.cat((cn[-1], cn[-2]), 1)
         return h_in, (hn, cn)
@@ -174,7 +185,7 @@ class Seq2SeqModel(nn.Module):
             assert feats is not None
             feats_inputs = 0
             for i in range(len(self.vocab['feats'])):
-                feats_inputs += self.feats_drop(self.feats_embedding[i](feats[:,:,i]))
+                feats_inputs += self.feats_drop(self.feats_embedding[i](feats[:, :, i]))
             if self.feats_first:
                 enc_inputs = torch.cat([feats_inputs, enc_inputs], dim=1)
             else:
@@ -194,7 +205,7 @@ class Seq2SeqModel(nn.Module):
             edit_logits = self.edit_clf(hn)
         else:
             edit_logits = None
-        
+
         log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask)
         return log_probs, edit_logits
 
@@ -221,7 +232,7 @@ class Seq2SeqModel(nn.Module):
             assert feats is not None
             feats_inputs = 0
             for i in range(len(self.vocab['feats'])):
-                feats_inputs += self.feats_drop(self.feats_embedding[i](feats[:,:,i]))
+                feats_inputs += self.feats_drop(self.feats_embedding[i](feats[:, :, i]))
             if self.feats_first:
                 enc_inputs = torch.cat([feats_inputs, enc_inputs], dim=1)
             else:
@@ -242,10 +253,10 @@ class Seq2SeqModel(nn.Module):
             edit_logits = self.edit_clf(hn)
         else:
             edit_logits = None
-        
+
         # (2) set up beam
         with torch.no_grad():
-            h_in = h_in.data.repeat(beam_size, 1, 1) # repeat data for beam search
+            h_in = h_in.data.repeat(beam_size, 1, 1)  # repeat data for beam search
             src_mask = src_mask.repeat(beam_size, 1)
             # repeat decoder hidden states
             hn = hn.data.repeat(beam_size, 1)
@@ -256,7 +267,7 @@ class Seq2SeqModel(nn.Module):
             """ Select the states according to back pointers. """
             for e in states:
                 br, d = e.size()
-                s = e.contiguous().view(beam_size, br // beam_size, d)[:,idx]
+                s = e.contiguous().view(beam_size, br // beam_size, d)[:, idx]
                 s.data.copy_(s.data.index_select(0, positions))
 
         # (3) main loop
@@ -264,8 +275,8 @@ class Seq2SeqModel(nn.Module):
             dec_inputs = torch.stack([b.get_current_state() for b in beam]).t().contiguous().view(-1, 1)
             dec_inputs = self.embedding(dec_inputs)
             log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask)
-            log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1)\
-                    .contiguous() # [batch, beam, V]
+            log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0, 1) \
+                .contiguous()  # [batch, beam, V]
 
             # advance each beam
             done = []
@@ -296,12 +307,13 @@ class Seq2SeqModelCombined(Seq2SeqModel):
     """
     A complete encoder-decoder model, with optional attention.
     """
+
     def __init__(self, args, vocab, emb_matrix=None, use_cuda=False):
         super().__init__(args, vocab, emb_matrix, use_cuda)
         self.vocab_size = args['vocab_size']
         self.emb_dim = args['emb_dim']
         self.hidden_dim = args['hidden_dim']
-        self.nlayers = args['num_layers'] # encoder layers, decoder layers = 1
+        self.nlayers = args['num_layers']  # encoder layers, decoder layers = 1
         self.emb_dropout = args.get('emb_dropout', 0.0)
         self.dropout = args['dropout']
         self.is_lexicon = False if args.get('lemmatizer', None) is None else True
@@ -315,10 +327,10 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         self.vocab = vocab
         self.log_attn = args['log_attn']
 
-        print("Building an attentional Seq2Seq model...")
-        print("Using a Bi-LSTM encoder")
-        print("Using a lexicon:", self.is_lexicon)
-        print("Lexicon dropout:", self.lexicon_dropout)
+        logger.info("Building an attentional Seq2Seq model...")
+        logger.info("Using a Bi-LSTM encoder")
+        logger.info(f"Using a lexicon: {self.is_lexicon}")
+        logger.info(f"Lexicon dropout: {self.lexicon_dropout}")
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
@@ -329,22 +341,37 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
         self.embedding = nn.Embedding(self.vocab_size, self.emb_dim, self.pad_token)
-        self.encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
-                bidirectional=True, batch_first=True, dropout=self.dropout if self.nlayers > 1 else 0)
-        self.lexicon_encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
-                bidirectional=True, batch_first=True, dropout=self.dropout if self.nlayers > 1 else 0)
-        self.decoder = LSTMDoubleAttention(self.emb_dim, self.dec_hidden_dim, \
-            batch_first=True, attn_type=self.args['attn_type'])
+        self.encoder = nn.LSTM(
+            self.emb_dim,
+            self.enc_hidden_dim,
+            self.nlayers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=self.dropout if self.nlayers > 1 else 0,
+        )
+        self.lexicon_encoder = nn.LSTM(
+            self.emb_dim,
+            self.enc_hidden_dim,
+            self.nlayers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=self.dropout if self.nlayers > 1 else 0,
+        )
+        self.decoder = LSTMDoubleAttention(
+            self.emb_dim,
+            self.dec_hidden_dim,
+            batch_first=True, attn_type=self.args['attn_type']
+        )
         self.hn_linear = nn.Linear(self.enc_hidden_dim * 4, self.enc_hidden_dim * 2)
         self.cn_linear = nn.Linear(self.enc_hidden_dim * 4, self.enc_hidden_dim * 2)
         self.h_in_linear = nn.Linear(self.enc_hidden_dim * 2, self.enc_hidden_dim)
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
         if self.edit:
-            edit_hidden = self.dec_hidden_dim//2
+            edit_hidden = self.dec_hidden_dim // 2
             self.edit_clf = nn.Sequential(
-                    nn.Linear(self.dec_hidden_dim, edit_hidden),
-                    nn.ReLU(),
-                    nn.Linear(edit_hidden, self.num_edit))
+                nn.Linear(self.dec_hidden_dim, edit_hidden),
+                nn.ReLU(),
+                nn.Linear(edit_hidden, self.num_edit))
 
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
         self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
@@ -358,19 +385,19 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             if isinstance(self.emb_matrix, np.ndarray):
                 self.emb_matrix = torch.from_numpy(self.emb_matrix)
             assert self.emb_matrix.size() == (self.vocab_size, self.emb_dim), \
-                    "Input embedding matrix must match size: {} x {}".format(self.vocab_size, self.emb_dim)
+                "Input embedding matrix must match size: {} x {}".format(self.vocab_size, self.emb_dim)
             self.embedding.weight.data.copy_(self.emb_matrix)
         else:
             self.embedding.weight.data.uniform_(-init_range, init_range)
         # decide finetuning
         if self.top <= 0:
-            print("Do not finetune embedding layer.")
+            logger.info("Do not finetune embedding layer.")
             self.embedding.weight.requires_grad = False
         elif self.top < self.vocab_size:
-            print("Finetune top {} embeddings.".format(self.top))
+            logger.info("Finetune top {} embeddings.".format(self.top))
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
-            print("Finetune all embeddings.")
+            logger.info("Finetune all embeddings.")
 
     def encode(self, encoder, enc_inputs, lens):
         """ Encode source sequence. """
@@ -404,10 +431,10 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         # Replace the word from the lexicon with UNK with the probability of lexicon_dropout
         if self.is_lexicon and self.lexicon_dropout > 0:
             lem_stump = torch.tensor(
-                [constant.SOS_ID, constant.EOS_ID] + 
+                [constant.SOS_ID, constant.EOS_ID] +
                 [constant.PAD_ID] * (lem.size(1) - 2)
             )
-            lem_mask_stump = torch.tensor([0]*3 + [1]*(lem.size(1) - 3), dtype=lem_mask.dtype)
+            lem_mask_stump = torch.tensor([0] * 3 + [1] * (lem.size(1) - 3), dtype=lem_mask.dtype)
             lem_hide = torch.FloatTensor(lem.size(0)).uniform_() < self.lexicon_dropout
             if self.use_cuda:
                 lem_hide = lem_hide.cuda()
@@ -437,7 +464,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             edit_logits = self.edit_clf(hn)
         else:
             edit_logits = None
-        
+
         log_probs, _, attn = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
 
         return log_probs, edit_logits
@@ -480,7 +507,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             log_probs, (hn, cn), attn = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
             assert log_probs.size(1) == 1, "Output must have 1-step of output."
             _, preds = log_probs.squeeze(1).max(1, keepdim=True)
-            dec_inputs = self.embedding(preds) # update decoder inputs
+            dec_inputs = self.embedding(preds)  # update decoder inputs
             max_len += 1
             attns.append([x.tolist() for x in attn])
             for i in range(batch_size):
@@ -498,7 +525,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
                 'lem': np.array(lem.tolist()),
                 'attns': np.array(attns),
                 'all_hyp': np.array(output_seqs)
-                }
+            }
         else:
             log_attns = None
 
@@ -512,7 +539,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
-        
+
         # (1) encode source
         h_in, (hn, cn) = self.encode(self.encoder, enc_inputs, src_lens)
 
@@ -530,12 +557,12 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             edit_logits = self.edit_clf(hn)
         else:
             edit_logits = None
-        
+
         # (2) set up beam
         with torch.no_grad():
-            h_in = h_in.data.repeat(beam_size, 1, 1) # repeat data for beam search
+            h_in = h_in.data.repeat(beam_size, 1, 1)  # repeat data for beam search
             src_mask = src_mask.repeat(beam_size, 1)
-            h_in1 = h_in1.data.repeat(beam_size, 1, 1) # repeat data for beam search
+            h_in1 = h_in1.data.repeat(beam_size, 1, 1)  # repeat data for beam search
             lem_mask = lem_mask.repeat(beam_size, 1)
             # repeat decoder hidden states
             hn = hn.data.repeat(beam_size, 1)
@@ -546,7 +573,7 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             """ Select the states according to back pointers. """
             for e in states:
                 br, d = e.size()
-                s = e.contiguous().view(beam_size, br // beam_size, d)[:,idx]
+                s = e.contiguous().view(beam_size, br // beam_size, d)[:, idx]
                 s.data.copy_(s.data.index_select(0, positions))
 
         attns = []
@@ -555,8 +582,8 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             dec_inputs = torch.stack([b.get_current_state() for b in beam]).t().contiguous().view(-1, 1)
             dec_inputs = self.embedding(dec_inputs)
             log_probs, (hn, cn), attn = self.decode(dec_inputs, hn, cn, h_in, h_in1, src_mask, lem_mask)
-            log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1)\
-                    .contiguous() # [batch, beam, V]
+            log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0, 1) \
+                .contiguous()  # [batch, beam, V]
 
             attns.append([x.tolist() for x in attn])
             # advance each beam
@@ -583,14 +610,14 @@ class Seq2SeqModelCombined(Seq2SeqModel):
             all_hyp += [hyp]
 
         if log_attn:
-            print('[Logging attention scores...]')
+            logger.info('[Logging attention scores...]')
             log_attn = {
                 'src': src.tolist(),
                 'lem': lem.tolist(),
                 'attns': attns,
                 'all_hyp': [[x.tolist() for x in hyp] for hyp in all_hyp]
-                }
+            }
             json.dump(log_attn, open('log_attn.json', 'w', encoding='utf-8'))
 
+        # TODO: This should match predict_greedy
         return all_hyp, edit_logits
-

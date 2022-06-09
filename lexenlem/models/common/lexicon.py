@@ -1,10 +1,8 @@
-import random
 from collections import Counter, defaultdict
-import lexenlem.models.common.seq2seq_constant as constant
 
 
 class Lexicon:
-    def __init__(self, unimorph=False, use_pos=True, use_word=True):
+    def __init__(self, unimorph: bool = False, use_pos: bool = True, use_word: bool = True):
         self.pos_lexicon = defaultdict(str)
         self.word_lexicon = defaultdict(str)
         self.unimorph_lexicon = defaultdict(str)
@@ -50,3 +48,15 @@ class Lexicon:
         if word in self.word_lexicon and self.use_word:
             return list(self.word_lexicon[word])
         return []
+
+
+class ExtendedLexicon:
+    def __init__(self, lexicon, extension):
+        self.lexicon = lexicon
+        self.extension = extension
+
+    def lemmatize(self, word: str, pos: str):
+        candidate = self.lexicon.lemmatize(word, pos)
+        if not candidate:
+            candidate = self.extension.lemmatize(word)
+        return candidate

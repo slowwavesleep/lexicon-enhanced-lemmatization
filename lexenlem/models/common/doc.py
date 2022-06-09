@@ -55,6 +55,7 @@ class Document:
         """ Write conll contents to file. """
         self.conll_file.write_conll(file_path)
 
+
 class Sentence:
 
     def __init__(self, tokens):
@@ -120,7 +121,7 @@ class Sentence:
                 governor = Word(["0", "ROOT", "_", "_", "_", "_", "-1", "_", "_", "_", "_", "_"])
             else:
                 # id is index in words list + 1
-                governor = self.words[word.governor-1]
+                governor = self.words[word.governor - 1]
             self.dependencies.append((governor, word.dependency_relation, word))
 
     def print_dependencies(self, file=None):
@@ -195,6 +196,7 @@ class Token:
 
     def __repr__(self):
         return f"<{self.__class__.__name__} index={self.index};words={self.words}>"
+
 
 class Word:
 

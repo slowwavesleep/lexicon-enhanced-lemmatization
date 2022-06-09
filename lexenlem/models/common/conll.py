@@ -6,9 +6,12 @@ import io
 
 FIELD_NUM = 10
 
-FIELD_TO_IDX = {'id': 0, 'word': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9}
+FIELD_TO_IDX = {
+    'id': 0, 'word': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9
+}
 
-class CoNLLFile():
+
+class CoNLLFile:
     def __init__(self, filename=None, input_str=None, ignore_gapping=True):
         # If ignore_gapping is True, all words that are gap fillers (identified with a period in
         # the sentence index) will be ignored.
@@ -95,7 +98,7 @@ class CoNLLFile():
         for sent in self.sents:
             cursent = []
             for ln in sent:
-                if '-' in ln[0]: # skip
+                if '-' in ln[0]:  # skip
                     continue
                 if len(field_idxs) == 1:
                     cursent += [ln[field_idxs[0]]]
@@ -109,7 +112,8 @@ class CoNLLFile():
         return results
 
     def set(self, fields, contents):
-        """ Set fields based on contents. If only one field (singleton list) is provided, then a list of content will be expected; otherwise a list of list of contents will be expected.
+        """ Set fields based on contents. If only one field (singleton list) is provided, then a list of content will be
+         expected; otherwise a list of list of contents will be expected.
         """
         assert isinstance(fields, list), "Must provide field names as a list."
         assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
@@ -155,7 +159,7 @@ class CoNLLFile():
         with open(filename, 'w', encoding='utf-8') as outfile:
             for sent in self.sents:
                 for ln in sent:
-                    if '-' not in ln[0]: # do not process if it is a mwt line
+                    if '-' not in ln[0]:  # do not process if it is a mwt line
                         lm = lemmas[idx]
                         if len(lm) == 0:
                             lm = '_'
@@ -204,7 +208,8 @@ class CoNLLFile():
         return cands
 
     def write_conll_with_mwt_expansions(self, expansions, output_file):
-        """ Expands MWTs predicted by the tokenizer and write to file. This method replaces the head column with a right branching tree. """
+        """ Expands MWTs predicted by the tokenizer and write to file. This method replaces the head column with
+         a right branching tree. """
         idx = 0
         count = 0
 
@@ -219,9 +224,13 @@ class CoNLLFile():
                     count += 1
                     endidx = idx + len(expanded) - 1
 
-                    print("{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])), file=output_file)
+                    print(
+                        "{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])), file=output_file
+                    )
                     for e_i, e_word in enumerate(expanded):
-                        print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=output_file)
+                        print(
+                            "{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=output_file
+                        )
                     idx = endidx
 
             print("", file=output_file)

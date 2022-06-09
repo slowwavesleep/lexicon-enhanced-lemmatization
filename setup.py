@@ -1,0 +1,35 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="lexenlem",
+    version="0.0.1",
+    packages=find_packages(),
+    python_requires=">=3.6",
+    include_package_data=True,
+    install_requires=[
+        "estnltk==1.7.0rc0",
+        "numpy>=1.21.2",
+        "torch==1.6.0",
+        "tqdm==4.64.0",
+        "click==8.1.2",
+        "regex==2022.3.15",
+        "decorator==4.4.2",
+        "conllu==4.4.1",
+        "soupsieve==2.3.1",
+        "beautifulsoup4==4.10.0",
+        "traitlets==5.1.1",
+        "python-crfsuite==0.9.7",
+        "prompt-toolkit==3.0.29",
+        "pexpect==4.8.0",
+        "parso==0.8.3",
+        "ptyprocess==0.7.0",
+        "nltk==3.6.7",
+        "jedi==0.18.1",
+        "ipython==7.32.0",
+        "cached-property==1.5.2",
+        "backcall==0.2.0",
+        "stanza==1.2.3",
+        "loguru==0.6.0",
+        "stanza==1.2.3",
+    ]
+)

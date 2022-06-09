@@ -1,6 +1,7 @@
 import apertium
 from collections import OrderedDict
 
+
 def lemmatize(word, lang):
     analysis = apertium.analyze(lang, word)
     if analysis:
